@@ -12,6 +12,37 @@ $Tymczasowy = Join-Path $env:TEMP ('skrytka_srodowisko_' + [guid]::NewGuid().ToS
 
 function Pokaz-Krok([string]$tekst) { Write-Host "  $tekst" }
 
+# Klikniecie w okno konsoli wlacza w Windows „szybkie zaznaczanie” i WSTRZYMUJE program (tytul „Select ...”).
+# Wylaczamy je dla tego okna (dotyczy tez dalszej budowy w tym samym oknie). Blad = zostaje jak bylo.
+function Disable-SzybkieZaznaczanie {
+    try {
+        Add-Type -Namespace Skrytka -Name Konsola -MemberDefinition @'
+[DllImport("kernel32.dll")] public static extern System.IntPtr GetStdHandle(int n);
+[DllImport("kernel32.dll")] public static extern bool GetConsoleMode(System.IntPtr h, out uint tryb);
+[DllImport("kernel32.dll")] public static extern bool SetConsoleMode(System.IntPtr h, uint tryb);
+'@
+        $wejscie = [Skrytka.Konsola]::GetStdHandle(-10)
+        $tryb = 0
+        if ([Skrytka.Konsola]::GetConsoleMode($wejscie, [ref]$tryb)) {
+            # ENABLE_QUICK_EDIT_MODE = 0x40 (zdejmujemy), ENABLE_EXTENDED_FLAGS = 0x80 (wymagane przy zmianie)
+            [void][Skrytka.Konsola]::SetConsoleMode($wejscie, (($tryb -band (-bnot 0x40)) -bor 0x80))
+        }
+    } catch {
+        Pokaz-Krok 'Uwaga: nie klikaj w to okno w trakcie pracy (klikniecie je wstrzymuje; Esc wznawia).'
+    }
+}
+
+# Pobranie z paskiem postepu: curl.exe jest w Windows 10 i 11; bez niego Invoke-WebRequest (bez paska).
+function Get-Plik([string]$adres, [string]$cel) {
+    $curl = Get-Command curl.exe -ErrorAction SilentlyContinue
+    if ($curl) {
+        & $curl.Source -L --fail --retry 3 --progress-bar -o $cel $adres
+        if ($LASTEXITCODE -ne 0) { throw "Nie udalo sie pobrac $adres (curl, kod $LASTEXITCODE)." }
+        return
+    }
+    Invoke-WebRequest -Uri $adres -OutFile $cel -UseBasicParsing
+}
+
 function Test-Suma([string]$plik, [string]$oczekiwana) {
     $suma = (Get-FileHash -Path $plik -Algorithm SHA256).Hash.ToLower()
     if ($suma -ne $oczekiwana.ToLower()) {
@@ -34,7 +65,7 @@ function Install-Go {
     $wydanie = $wydania | Where-Object { $_.stable } | Select-Object -First 1
     $plik = $wydanie.files | Where-Object { $_.os -eq 'windows' -and $_.arch -eq 'amd64' -and $_.kind -eq 'archive' }
     $zip = Join-Path $Tymczasowy $plik.filename
-    Invoke-WebRequest -Uri ('https://go.dev/dl/' + $plik.filename) -OutFile $zip -UseBasicParsing
+    Get-Plik ('https://go.dev/dl/' + $plik.filename) $zip
     Test-Suma $zip $plik.sha256
     Expand-Do $zip (Join-Path $Korzen '_go-portable') 'go'
     Pokaz-Krok "Go: zainstalowano $($wydanie.version) w _go-portable"
@@ -50,7 +81,7 @@ function Install-Node {
     $nazwa = "node-$($lts.version)-win-x64"
     $baza = "https://nodejs.org/dist/$($lts.version)"
     $zip = Join-Path $Tymczasowy "$nazwa.zip"
-    Invoke-WebRequest -Uri "$baza/$nazwa.zip" -OutFile $zip -UseBasicParsing
+    Get-Plik "$baza/$nazwa.zip" $zip
     $sumy = (Invoke-WebRequest -Uri "$baza/SHASUMS256.txt" -UseBasicParsing).Content -split "`n"
     $wiersz = $sumy | Where-Object { $_.Trim().EndsWith("  $nazwa.zip") } | Select-Object -First 1
     if (-not $wiersz) { throw "Brak sumy SHA-256 dla $nazwa.zip w SHASUMS256.txt. Przerwano." }
@@ -60,6 +91,7 @@ function Install-Node {
 }
 
 try {
+    Disable-SzybkieZaznaczanie
     New-Item -ItemType Directory -Force -Path $Tymczasowy | Out-Null
     Write-Host 'Sprawdzanie narzedzi do budowania Skrytki:'
     Install-Go
