@@ -19,6 +19,15 @@ updates:
     groups:
       npm-drobne:
         update-types: [minor, patch]
+      # Vite i wtyczka Svelte wymagają siebie nawzajem przy wersjach głównych: jeden pull request.
+      vite-svelte:
+        patterns: ["vite", "@sveltejs/vite-plugin-svelte"]
+        update-types: [major]
+    ignore:
+      # TypeScript 7: svelte-check 4 obsługuje tylko TypeScript 5 i 6 (sprawdzone 2026-11-28); zdjąć, gdy
+      # svelte-check doda TypeScript 7.
+      - dependency-name: typescript
+        versions: [">=7"]
 
   - package-ecosystem: github-actions
     directory: /

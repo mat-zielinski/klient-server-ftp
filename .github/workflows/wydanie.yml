@@ -24,10 +24,10 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Pobranie kodu
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Instalacja Node (LTS)
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: lts/*
           cache: npm
@@ -41,7 +41,7 @@ jobs:
           npm run straznik
 
       - name: Przekazanie web/dist
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: web-dist
           path: web/dist/
@@ -68,17 +68,17 @@ jobs:
             goarch: arm64
     steps:
       - name: Pobranie kodu
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Instalacja Go (wersja z go.mod)
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache: true
           cache-dependency-path: go.sum
 
       - name: Wstawienie zbudowanego interfejsu
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: web-dist
           path: web/dist
@@ -120,7 +120,7 @@ jobs:
           ls -l wynik
 
       - name: Przekazanie paczki
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: paczka-${{ matrix.cel }}
           path: wynik/*
@@ -136,7 +136,7 @@ jobs:
       contents: write
     steps:
       - name: Zebranie paczek
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           pattern: paczka-*
           path: wynik
