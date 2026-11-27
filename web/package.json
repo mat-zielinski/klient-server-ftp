@@ -10,7 +10,7 @@
     "straznik": "node sprawdz_styl.mjs"
   },
   "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "^6",
+    "@sveltejs/vite-plugin-svelte": "^7",
     "@tsconfig/svelte": "^5",
     "svelte": "^5",
     "svelte-check": "^4",
