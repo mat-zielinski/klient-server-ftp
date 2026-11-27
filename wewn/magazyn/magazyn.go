@@ -247,7 +247,7 @@ func rozwiazWUdziale(korzen, dysk string) (string, error) {
 		if skoki++; skoki > konfiguracja.MagazynMaksSkokowDowiazan {
 			return "", rdzen.ErrPozaUdzialem
 		}
-		relCelu, ok := wKorzeniu(korzen, bezwzglednyCel(biezacy, cel))
+		relCelu, ok := wKorzeniu(korzen, dlugaNazwa(bezwzglednyCel(biezacy, cel)))
 		if !ok {
 			return "", rdzen.ErrPozaUdzialem
 		}
