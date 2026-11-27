@@ -70,7 +70,14 @@ jobs:
         run: go vet ./...
 
       - name: go test
-        run: go test ./...
+        # Przy błędzie nazwy testów i ich komunikaty idą jako publiczne adnotacje (widoczne bez logowania).
+        run: |
+          set -o pipefail
+          if go test ./... 2>&1 | tee wynik_testow.txt; then exit 0; fi
+          grep -E -- '--- FAIL|_test\.go:[0-9]+|^FAIL|panic:' wynik_testow.txt | head -40 | while IFS= read -r linia; do
+            echo "::error title=go test (${{ runner.os }})::${linia}"
+          done
+          exit 1
 
       - name: Strażnik projektu
         run: go run ./narzedzia_dev/straznik
