@@ -33,3 +33,4 @@ dane/miniatury/
 *.mutacja_kopia
 *.mutacja_tmp
 *.mutacja_konflikt
+_node-portable/
