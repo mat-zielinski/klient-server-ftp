@@ -25,8 +25,6 @@ var (
 // plikKont: zawartość dane/konta.json.
 type plikKont struct {
 	Konta []rdzen.Uzytkownik `json:"konta"`
-	// DwaFA: login → sekret TOTP (base32) włączonego 2FA; poza rdzen.Uzytkownik, by nie wyciekał w API.
-	DwaFA map[string]string `json:"dwa_fa,omitempty"`
 }
 
 // Konta: magazyn użytkowników, bezpieczny dla wielu gorutyn.
@@ -34,12 +32,6 @@ type Konta struct {
 	mu    sync.RWMutex
 	plik  string
 	konta map[string]rdzen.Uzytkownik
-
-	// 2FA (chronione przez mu): włączone sekrety (w pliku), oczekujące na potwierdzenie
-	// i ostatni użyty krok czasu (w pamięci, ochrona przed powtórzeniem kodu).
-	dwaFA       map[string]string
-	oczekujace  map[string]string
-	ostatniKrok map[string]int64
 
 	blokady *blokady
 	param   parametryArgon
@@ -57,15 +49,12 @@ type Konta struct {
 // Otworz plik kont (brak pliku = pusta lista).
 func Otworz(plik string) (*Konta, error) {
 	k := &Konta{
-		plik:        plik,
-		konta:       map[string]rdzen.Uzytkownik{},
-		dwaFA:       map[string]string{},
-		oczekujace:  map[string]string{},
-		ostatniKrok: map[string]int64{},
-		blokady:     noweBlokady(),
-		param:       domyslneParametry(),
-		teraz:       time.Now,
-		porownaj:    sprawdzHaslo,
+		plik:     plik,
+		konta:    map[string]rdzen.Uzytkownik{},
+		blokady:  noweBlokady(),
+		param:    domyslneParametry(),
+		teraz:    time.Now,
+		porownaj: sprawdzHaslo,
 	}
 	dane, err := os.ReadFile(plik)
 	if errors.Is(err, os.ErrNotExist) {
@@ -87,15 +76,6 @@ func Otworz(plik string) (*Konta, error) {
 		}
 		k.konta[u.Login] = kopia(u)
 	}
-	for login, sekret := range p.DwaFA {
-		if _, jest := k.konta[login]; !jest {
-			continue // osierocony wpis (konto usunięte ręcznie z pliku)
-		}
-		if _, err := dekodujSekret(sekret); err != nil {
-			return nil, err
-		}
-		k.dwaFA[login] = sekret
-	}
 	return k, nil
 }
 
@@ -108,14 +88,7 @@ func (k *Konta) CzyPusto() bool {
 
 // Zaloguj sprawdza hasło; po MaksBlednychLogowan złych próbach z jednego IP albo na jeden login
 // w oknie czasu = rdzen.ErrKontoZablokowane. Porównanie w stałym czasie, także dla nieistniejącego loginu.
-// Konto z włączonym 2FA: ErrWymaganyKod (trzeba użyć ZalogujZKodem).
 func (k *Konta) Zaloguj(login, haslo, ip string) (rdzen.Uzytkownik, error) {
-	return k.ZalogujZKodem(login, haslo, "", ip)
-}
-
-// ZalogujZKodem: jak Zaloguj, z kodem TOTP dla kont z 2FA. Brak kodu = ErrWymaganyKod (hasło dobre),
-// zły albo powtórzony kod = ErrZlyKod i próba liczona do blokady. Bez 2FA kod jest pomijany.
-func (k *Konta) ZalogujZKodem(login, haslo, kod, ip string) (rdzen.Uzytkownik, error) {
 	teraz := k.teraz()
 	kIP, kLogin := kluczIP(ip), kluczLoginu(login)
 	if k.blokady.czyZablokowane(teraz, kIP, kLogin) {
@@ -140,12 +113,6 @@ func (k *Konta) ZalogujZKodem(login, haslo, kod, ip string) (rdzen.Uzytkownik, e
 	}
 	if u.Wylaczony {
 		return rdzen.Uzytkownik{}, rdzen.ErrZleDane
-	}
-	if err := k.sprawdzDrugiSkladnik(login, kod, teraz); err != nil {
-		if errors.Is(err, ErrZlyKod) {
-			k.blokady.zarejestrujBlad(teraz, kIP, kLogin)
-		}
-		return rdzen.Uzytkownik{}, err
 	}
 	k.blokady.wyczysc(kLogin)
 	return bezHasha(u), nil
@@ -292,12 +259,8 @@ func (k *Konta) Usun(login string) error {
 // przywraca stan w pamięci. Wywołujący trzyma k.mu do zapisu.
 func (k *Konta) zmienIZapisz(login string, nowy *rdzen.Uzytkownik) error {
 	stary, byl := k.konta[login]
-	sekret, mial2FA := k.dwaFA[login]
 	if nowy == nil {
 		delete(k.konta, login)
-		delete(k.dwaFA, login)
-		delete(k.oczekujace, login)
-		delete(k.ostatniKrok, login)
 	} else {
 		k.konta[login] = *nowy
 	}
@@ -307,9 +270,6 @@ func (k *Konta) zmienIZapisz(login string, nowy *rdzen.Uzytkownik) error {
 		} else {
 			delete(k.konta, login)
 		}
-		if mial2FA {
-			k.dwaFA[login] = sekret
-		}
 		return err
 	}
 	return nil
@@ -317,7 +277,7 @@ func (k *Konta) zmienIZapisz(login string, nowy *rdzen.Uzytkownik) error {
 
 // zapisz zapisuje dane/konta.json atomowo (0600). Wywołujący trzyma k.mu.
 func (k *Konta) zapisz() error {
-	p := plikKont{Konta: make([]rdzen.Uzytkownik, 0, len(k.konta)), DwaFA: k.dwaFA}
+	p := plikKont{Konta: make([]rdzen.Uzytkownik, 0, len(k.konta))}
 	for _, u := range k.konta {
 		p.Konta = append(p.Konta, u)
 	}

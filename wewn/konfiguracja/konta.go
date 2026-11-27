@@ -47,20 +47,6 @@ const (
 	ArgonMaksCzas      uint32 = 16
 )
 
-// 2FA TOTP (RFC 6238, HMAC-SHA1).
-const (
-	// TOTPCyfry: długość kodu.
-	TOTPCyfry = 6
-	// TOTPOkres: długość kroku czasu.
-	TOTPOkres = 30 * time.Second
-	// TOTPOkno: ile kroków wstecz i naprzód przyjmować (rozjazd zegara telefonu).
-	TOTPOkno = 1
-	// TOTPDlugoscSekretu: bajty sekretu (160 bitów, zalecane dla SHA1).
-	TOTPDlugoscSekretu = 20
-	// TOTPWystawca: nazwa w aplikacji Authenticator.
-	TOTPWystawca = NazwaAplikacji
-)
-
 // Urządzenia (sesje z opisem).
 const (
 	// MaksSesjiNaKonto: przy przekroczeniu wypada sesja najdawniej używana.

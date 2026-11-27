@@ -6,19 +6,8 @@ Lista otwartych punktów: do poprawy w kodzie, do sprawdzenia na żywo, do decyz
 ## 1. Do poprawy w kodzie
 
 **Z pierwszego uruchomienia (2026-11-27)**
-- [ ] Pliki: pasek narzędzi łamie się na drugi rząd przy zaznaczeniu (przycisk „Wgraj” spada niżej); zasada stacji
-      4a: zwężać, nie zawijać
-- [ ] Pulpit: w trybie VPN karta adresów pokazuje adres publiczny jak dostępny; oznaczyć „niedostępny w trybie VPN”
-- [ ] Dziennik: odświeżać statystyki same po zdarzeniu „koniec” transferu (teraz dopiero po ponownym wejściu)
-- [ ] Kreator: pole loginu ma wpisaną wartość „admin” zamiast podpowiedzi; pisanie dokleja tekst
-- [ ] FTPS: `curl` kończy pobranie kodem 56 mimo poprawnej treści (zamykanie TLS kanału danych); sprawdzić z FileZillą
-- [ ] Wgrywanie przez HTTP nie pokazuje się w transferach na żywo (tylko wpis po zatwierdzeniu)
-- [ ] Monitor: liczba połączeń nie obejmuje FTPS (pakiet ftp nie ma licznika)
-- [ ] Link publiczny z hasłem: pobieranie przez blob w pamięci przeglądarki; ciasteczko po haśle i zwykły link;
-      wejście do podfolderów i ZIP całości
 - [ ] FTPS przy wielu adresach nasłuchu: porty pasywne wiązane z IP nasłuchu
 - [ ] Let's Encrypt HTTP-01 na porcie 80 (dziś tylko TLS-ALPN-01 na 443)
-- [ ] Kosz: przeglądanie, przywracanie, opróżnianie
 - [ ] Testy jednostkowe interfejsu (vitest): `format.ts`, nawigacja, koder QR, rozmyte dopasowanie
 - [ ] `rdzen.Zwin` (usuwanie ogonków) eksportowane, zamiast kopii tabeli w indeksie
 
@@ -42,9 +31,8 @@ Lista otwartych punktów: do poprawy w kodzie, do sprawdzenia na żywo, do decyz
 ## 3. Do decyzji usera
 
 - [ ] Nazwa aplikacji (robocza „Skrytka”; `NazwaAplikacji` w `wewn/konfiguracja/wersja.go`)
-- [ ] FTPS a 2FA: konto z 2FA nie zaloguje się przez FTPS (brak miejsca na kod); propozycja: osobne „hasła
-      aplikacji” do programów FTP, jak w dużych usługach
-- [ ] Ikona w zasobniku (biblioteka `fyne.io/systray`) czy wystarczy usługa Windows
+- [ ] Powiadomienia systemowe przy starcie pobrania („ktoś pobiera plik”): wymagają osobnej biblioteki
+      (zasobnik `fyne.io/systray` ich nie ma)
 - [ ] Let's Encrypt w trybie publicznym: czy jest domena; bez niej certyfikat własny i sprawdzanie odcisku
 - [ ] Przekazywanie klientom plików tunelu WireGuard: kto je robi (router UniFi) i czy Skrytka ma tylko o nich
       przypominać

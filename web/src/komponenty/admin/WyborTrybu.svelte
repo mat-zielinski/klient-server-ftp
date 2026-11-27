@@ -29,6 +29,7 @@
       <span class="tytul">{TRYBY_SIECI.vpn.nazwa} <Pigulka stan="ok">{TRYBY_SIECI.vpn.znaczek}</Pigulka></span>
       <span class="opis">{TRYBY_SIECI.vpn.opis}</span>
     </span>
+    <span class="znacznik" aria-hidden="true"></span>
   </label>
   <label class="opcja" class:wybrana={value === 'publiczny'}>
     <input
@@ -43,6 +44,7 @@
       <span class="tytul">{TRYBY_SIECI.publiczny.nazwa} <Pigulka stan="ostrz">Wymuszone HTTPS</Pigulka></span>
       <span class="opis">{TRYBY_SIECI.publiczny.opis}</span>
     </span>
+    <span class="znacznik" aria-hidden="true"></span>
   </label>
   {#if value === 'publiczny'}
     <Komunikat rodzaj="ostrz">{TRYBY_SIECI.publiczny.ostrzezenie}</Komunikat>
@@ -98,5 +100,22 @@
     flex-wrap: wrap;
     gap: var(--odstep-m);
     font-weight: var(--czcionka-polgruby);
+  }
+  .tekst {
+    flex: 1;
+  }
+  /* kółko wyboru po prawej (jak radio): wybrane = pełne obramowanie akcentem z kropką */
+  .znacznik {
+    flex: none;
+    width: var(--uklad-ikona-l);
+    height: var(--uklad-ikona-l);
+    margin-top: var(--odstep-pozycje);
+    border-radius: var(--promien-kolo);
+    border: var(--odstep-pozycje) solid var(--kolor-siatka);
+    transition: border var(--czas-szybki), box-shadow var(--czas-szybki);
+  }
+  .wybrana .znacznik {
+    border: var(--odstep-kafelki) solid var(--kolor-niebieski);
+    box-shadow: 0 0 0 var(--odstep-xs) var(--kolor-fokus-pola);
   }
 </style>

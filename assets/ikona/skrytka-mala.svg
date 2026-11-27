@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<title>Skrytka (16-24 px)</title>
+<defs><linearGradient id="g1" gradientUnits="userSpaceOnUse" x1="96" y1="16" x2="400" y2="500"><stop offset="0" stop-color="#3d7ef0"/><stop offset="0.5" stop-color="#2856c4"/><stop offset="1" stop-color="#10204a"/></linearGradient><linearGradient id="g2" gradientUnits="userSpaceOnUse" x1="256" y1="0" x2="256" y2="300"><stop offset="0" stop-color="#ffffff" stop-opacity="0.2"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/></linearGradient></defs>
+<path d="M8 112A104 104 0 0 1 112 8L400 8A104 104 0 0 1 504 112L504 400A104 104 0 0 1 400 504L112 504A104 104 0 0 1 8 400Z" fill="url(#g1)"/>
+<path d="M8 112A104 104 0 0 1 112 8L400 8A104 104 0 0 1 504 112L504 400A104 104 0 0 1 400 504L112 504A104 104 0 0 1 8 400Z" fill="url(#g2)"/>
+<path d="M128 398A14 14 0 0 1 142 384L186 384A14 14 0 0 1 200 398L200 418A14 14 0 0 1 186 432L142 432A14 14 0 0 1 128 418ZM312 398A14 14 0 0 1 326 384L370 384A14 14 0 0 1 384 398L384 418A14 14 0 0 1 370 432L326 432A14 14 0 0 1 312 418Z" fill="#f4f8ff"/>
+<path d="M88 152A56 56 0 0 1 144 96L368 96A56 56 0 0 1 424 152L424 344A56 56 0 0 1 368 400L144 400A56 56 0 0 1 88 344ZM216 148A12 12 0 0 1 228 136L284 136A12 12 0 0 1 296 148L296 232A4 4 0 0 0 300 236L326.31 236A14 14 0 0 1 336.67 259.43L267.83 335.01A16 16 0 0 1 244.17 335.01L175.33 259.43A14 14 0 0 1 185.69 236L212 236A4 4 0 0 0 216 232Z" fill="#f4f8ff" fill-rule="evenodd"/>
+</svg>

@@ -9,7 +9,7 @@ import (
 	"skrytka/wewn/uslugi/monitor"
 )
 
-// trasyFali2: monitor, indeks, miniatury, sumy, urządzenia i 2FA, mapa dziennika.
+// trasyFali2: monitor, indeks, miniatury, sumy, urządzenia, mapa dziennika.
 func (s *serwer) trasyFali2(m *nethttp.ServeMux) {
 	m.HandleFunc("GET /api/monitor", s.tylkoAdmin(s.stanMonitora))
 	m.HandleFunc("GET /api/monitor/strumien", s.tylkoAdmin(s.strumienMonitora))
@@ -20,9 +20,6 @@ func (s *serwer) trasyFali2(m *nethttp.ServeMux) {
 	m.HandleFunc("GET /api/dziennik/mapa", s.zalogowany(s.mapaDziennika))
 	m.HandleFunc("GET /api/konta/urzadzenia", s.zalogowany(s.urzadzenia))
 	m.HandleFunc("DELETE /api/konta/urzadzenia", s.zalogowany(s.usunUrzadzenie))
-	m.HandleFunc("POST /api/konta/2fa/start", s.zalogowany(s.start2FA))
-	m.HandleFunc("POST /api/konta/2fa/wlacz", s.zalogowany(s.wlacz2FA))
-	m.HandleFunc("POST /api/konta/2fa/wylacz", s.zalogowany(s.wylacz2FA))
 }
 
 // stanMonitora: GET /api/monitor (admin).

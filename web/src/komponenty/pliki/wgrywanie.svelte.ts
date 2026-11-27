@@ -47,6 +47,8 @@ function wyslijKawalek(
     x.open('PUT', '/api/wgraj?' + q)
     x.setRequestHeader('X-Skrytka', '1')
     x.setRequestHeader('Content-Type', 'application/octet-stream')
+    // pełny rozmiar pliku: serwer pokazuje wgranie na żywo z postępem
+    x.setRequestHeader('X-Rozmiar-Calkowity', String(z.plik.size))
     x.upload.onprogress = (e) => naPostep(od + e.loaded)
     x.onload = () => {
       if (x.status >= 200 && x.status < 300) {

@@ -205,3 +205,54 @@ func (k *klientFTPS) wyslij(sciezka string, tresc []byte) int {
 	kod, _ = k.odpowiedz()
 	return kod
 }
+
+// surowePodTLS: surowe połączenie danych pod TLS klienta; zapamiętuje, czy TCP doszło do EOF.
+// Gdy serwer wyśle close_notify, crypto/tls kończy odczyt na alercie i nie czyta już z TCP,
+// więc eof == false oznacza poprawne zakończenie TLS (EOF z samego TCP = brak close_notify).
+type surowePodTLS struct {
+	net.Conn
+	eof bool
+}
+
+func (s *surowePodTLS) Read(b []byte) (int, error) {
+	n, err := s.Conn.Read(b)
+	if err == io.EOF {
+		s.eof = true
+	}
+	return n, err
+}
+
+// wynikRETR: kod końcowy, dane, błąd odczytu i czy przyszedł close_notify.
+type wynikRETR struct {
+	kod         int
+	dane        []byte
+	blad        error
+	closeNotify bool
+}
+
+// pobierzJakSchannel: RETR jak curl ze Schannel: klient dosyła rekord TLS na kanał danych (serwer go nie
+// czyta), a dane odbiera dopiero po 226. Serwer zamykający gniazdo z nieprzeczytanymi danymi wysyła RST,
+// które wyrzuca nieodebrane dane klienta.
+func (k *klientFTPS) pobierzJakSchannel(sciezka string) wynikRETR {
+	k.t.Helper()
+	tresc := k.wymagaj(229, "EPSV")
+	i, j := strings.Index(tresc, "(|||"), strings.LastIndex(tresc, "|)")
+	port, err := strconv.Atoi(tresc[i+4 : j])
+	if err != nil {
+		k.t.Fatalf("EPSV: %s", tresc)
+	}
+	c, err := net.Dial("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)))
+	if err != nil {
+		k.t.Fatal(err)
+	}
+	sur := &surowePodTLS{Conn: c}
+	d := tls.Client(sur, k.cfg)
+	defer d.Close()
+	k.wymagaj(150, "RETR %s", sciezka)
+	if _, err := d.Write([]byte("resztka")); err != nil {
+		k.t.Fatal(err)
+	}
+	kod, _ := k.odpowiedz()
+	b, err := io.ReadAll(d)
+	return wynikRETR{kod: kod, dane: b, blad: err, closeNotify: !sur.eof}
+}

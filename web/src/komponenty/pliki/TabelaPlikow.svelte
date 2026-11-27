@@ -52,17 +52,44 @@
     return [{ odstep: wirt.gora }, ...lista, { odstep: wirt.dol }]
   })
 
+  // Kolumny rozmiar / zmieniono pokazujemy tylko, gdy obok zostaje nazwie co najmniej tyle miejsca, ile mówią
+  // tokeny (--kolumna-xl przy dacie, --kolumna-l przy rozmiarze). Ukryte dane schodzą do drugiego wiersza pod
+  // nazwą. Kolumny znikają z <colgroup>, nagłówka i wierszy naraz, więc wszystko zostaje w jednej siatce.
+  let szerokosc = $state(0)
+  let kolumnaPx = $state<Record<string, number>>({})
+
+  $effect(() => {
+    if (!kontener) return
+    const styl = getComputedStyle(kontener)
+    const px = (n: string) => parseFloat(styl.getPropertyValue(`--kolumna-${n}`)) || 0
+    kolumnaPx = { xs: px('xs'), s: px('s'), l: px('l'), xl: px('xl') }
+  })
+
+  const stale = $derived((wieleNaraz ? 3 : 2) * (kolumnaPx.xs ?? 0) + (kolumnaPx.s ?? 0) * 2)
+  const pokazRozmiar = $derived(szerokosc >= stale + (kolumnaPx.l ?? 0))
+  const pokazZmieniono = $derived(pokazRozmiar && szerokosc >= stale + (kolumnaPx.l ?? 0) + (kolumnaPx.xl ?? 0))
+  const drugiWiersz = $derived(!!zapytanie || !pokazRozmiar || !pokazZmieniono)
+
+  /** Drugi wiersz pod nazwą: ścieżka (wyniki szukania) i dane z ukrytych kolumn. */
+  function opisWpisu(w: Wpis): string {
+    const czesci: string[] = []
+    if (zapytanie) czesci.push(w.sciezka)
+    if (!pokazRozmiar && !w.folder) czesci.push(rozmiar(w.rozmiar))
+    if (!pokazZmieniono) czesci.push(dataWzgledna(w.zmieniono))
+    return czesci.join(' · ')
+  }
+
   const kolumny = $derived<KolumnaTabeli[]>([
     ...(wieleNaraz ? [{ klucz: 'wybor', etykieta: '', szerokosc: 'xs', sortowalna: false }] : []),
     { klucz: 'ikona', etykieta: '', szerokosc: 'xs', sortowalna: false },
     { klucz: 'nazwa', etykieta: 'Nazwa' },
-    { klucz: 'rozmiar', etykieta: 'Rozmiar', szerokosc: 's', wyrownanie: 'prawo', ukryjPonizej: 'telefon' },
-    { klucz: 'zmieniono', etykieta: 'Zmieniono', szerokosc: 'l', ukryjPonizej: 'waski' },
+    ...(pokazRozmiar ? [{ klucz: 'rozmiar', etykieta: 'Rozmiar', szerokosc: 's', wyrownanie: 'prawo' as const }] : []),
+    ...(pokazZmieniono ? [{ klucz: 'zmieniono', etykieta: 'Zmieniono', szerokosc: 'l' }] : []),
     { klucz: 'akcje', etykieta: '', szerokosc: 's', wyrownanie: 'prawo', sortowalna: false },
   ])
 </script>
 
-<div class="kontener" bind:this={kontener}>
+<div class="kontener" bind:this={kontener} bind:clientWidth={szerokosc}>
   <Tabela {kolumny} {wiersze} sortKlucz={sort} {malejaco} naSortuj={zapytanie ? undefined : (k, m) => z.sortuj(k, m)}>
     {#snippet wiersz(r)}
       {#if 'odstep' in r}
@@ -99,10 +126,10 @@
           </td>
           <td class="nazwa" title={w.sciezka}>
             <span class="skroc"><Podswietlenie tekst={w.nazwa} {zapytanie} /></span>
-            {#if zapytanie}<span class="opis skroc sciezka">{w.sciezka}</span>{/if}
+            {#if drugiWiersz}<span class="opis skroc sciezka">{opisWpisu(w)}</span>{/if}
           </td>
-          <td class="prawo mono opis">{w.folder ? '' : rozmiar(w.rozmiar)}</td>
-          <td class="opis" title={data(w.zmieniono)}>{dataWzgledna(w.zmieniono)}</td>
+          {#if pokazRozmiar}<td class="prawo mono opis">{w.folder ? '' : rozmiar(w.rozmiar)}</td>{/if}
+          {#if pokazZmieniono}<td class="opis" title={data(w.zmieniono)}>{dataWzgledna(w.zmieniono)}</td>{/if}
           <td class="prawo">
             <button
               class="wiecej"

@@ -32,7 +32,7 @@ Parametry ścieżki pliku zawsze w zapytaniu: `?udzial=<nazwa>&sciezka=/a/b.txt`
 | `POST /api/folder?udzial&sciezka` | — | `{}` |
 | `POST /api/zmien?udzial` | `{"z","na"}`: PEŁNE ścieżki w udziale (zmiana nazwy albo przeniesienie) | `{}` |
 | `DELETE /api/plik?udzial&sciezka` | — | do kosza, `{}` |
-| `PUT /api/wgraj?udzial&sciezka&przesuniecie=N&koniec=0\|1&nadpisz=0\|1` | treść = kawałek (do 8 MB) | `{"przeslano":N}`; `koniec=1` zatwierdza; przy `przesuniecie=0` serwer tworzy brakujące foldery nadrzędne (każdy przez bramkę `OpWgranie`, istniejący = OK); istniejący plik przy `nadpisz=0` = 409; złe przesunięcie = 409 |
+| `PUT /api/wgraj?udzial&sciezka&przesuniecie=N&koniec=0|1&nadpisz=0|1` | treść = kawałek (do 8 MB); nagłówek `X-Rozmiar-Calkowity: <bajty całego pliku>` (opcjonalny, brak = 0 = nieznany, zła liczba = 400) | `{"przeslano":N}`; `koniec=1` zatwierdza; przy `przesuniecie=0` serwer tworzy brakujące foldery nadrzędne (każdy przez bramkę `OpWgranie`, istniejący = OK); istniejący plik przy `nadpisz=0` = 409; złe przesunięcie = 409. Cały plik = JEDEN transfer w `/api/transfery` (kierunek `wgranie`, rozmiar z `X-Rozmiar-Calkowity` minus przesunięcie startu): zaczyna go kawałek z `przesuniecie=0` (zamyka poprzedni jako `przerwane`) albo pierwszy kawałek bez aktywnego transferu tego konta dla tej ścieżki; `koniec=1` = `ok`, błąd kawałka = `blad` (przerwanie przez admina = 409, `przerwane`), brak kawałka przez 60 s = `przerwane`. Wpis dziennika „wgranie” powstaje przy końcu transferu (jeden na plik) |\|1&nadpisz=0\|1` | treść = kawałek (do 8 MB) | `{"przeslano":N}`; `koniec=1` zatwierdza; przy `przesuniecie=0` serwer tworzy brakujące foldery nadrzędne (każdy przez bramkę `OpWgranie`, istniejący = OK); istniejący plik przy `nadpisz=0` = 409; złe przesunięcie = 409 |
 | `GET /api/wgraj?udzial&sciezka` | — | `{"przeslano":N}` (do wznowienia) |
 
 ### Menu „Pobierz przez…” (prawy przycisk na pliku)
@@ -51,6 +51,17 @@ Parametry ścieżki pliku zawsze w zapytaniu: `?udzial=<nazwa>&sciezka=/a/b.txt`
 
 `dostepne:false` + `"powod"` gdy np. FTPS wyłączony albo konto bez prawa FTPS. Adres hosta = host, którym klient
 właśnie wszedł (nagłówek `Host`), żeby przez WireGuard i z LAN link był poprawny.
+
+## Kosz (prawo zapisu w udziale; udział tylko do odczytu = 403)
+
+| metoda i adres | wejście | wyjście |
+|---|---|---|
+| `GET /api/kosz?udzial` | — | `[{"id","nazwa","sciezka","usunieto","rozmiar","folder","rodzaj"}]` od najnowszych; `sciezka` = oryginalne miejsce, `id` = base64url(`<znacznik>/<ścieżka>`), folder: `rozmiar` = suma plików; brak kosza = `[]` |
+| `POST /api/kosz/przywroc?udzial` | `{"id","nadpisz":bool}` | `{}`; brakujące foldery nadrzędne są tworzone; zajęte miejsce bez `nadpisz` = 409, z `nadpisz` obecny element najpierw trafia do kosza; zły `id` = 400, nieistniejący = 404. Wpis dziennika `zmiana`, odświeżenie indeksu |
+| `DELETE /api/kosz?udzial&id` | — | `{}`; trwałe usunięcie jednego wpisu (admin albo prawo zapisu); wpis dziennika `zmiana` |
+| `DELETE /api/kosz/wszystko?udzial` | — | admin: `{"usuniete":N}`, trwałe opróżnienie kosza udziału; wpis dziennika `zmiana` |
+
+Serwer sam usuwa trwale wpisy starsze niż 30 dni (`KoszOproznijPoDniach`), raz na dobę.
 
 ## Transfery na żywo
 
@@ -79,8 +90,9 @@ transfery i łączny wykres prędkości z ostatnich 5 minut.
 | `POST /api/udostepnienia` | `{"udzial","sciezka","wygasa","haslo","limit_pobran"}`; `wygasa` "" = 7 dni (maks. 365) | `Link` + `"adres"` |
 | `DELETE /api/udostepnienia?id` | — | `{}` |
 | `GET /s/<id>` | — | strona publiczna (ta sama aplikacja, widok „link”) |
-| `GET /api/publiczny/<id>[?haslo=…]` (hasło w nagłówku `X-Haslo`) | — | info / lista folderu |
-| `GET /api/publiczny/<id>/pobierz[?sciezka]` | — | plik |
+| `GET /api/publiczny/<id>[?sciezka=/podfolder]` (hasło w nagłówku `X-Haslo`, awaryjnie `?haslo=`) | — | info / lista folderu (`sciezka` = podfolder względem linku, wyjście poza link = 400); po POPRAWNYM haśle `Set-Cookie: skrytka_link=<wygasa>.<podpis>` (HttpOnly, SameSite=Strict, `Path=/api/publiczny/<id>`, 30 min, nie dłużej niż link; podpis HMAC-SHA256 z id i czasu wygaśnięcia, klucz losowy w pamięci serwera, restart = hasło od nowa). Ciasteczko nie przedłuża się samo (nowe tylko po haśle). Bez hasła i bez ciasteczka = 401 (nie liczy się jako zła próba) |
+| `GET /api/publiczny/<id>/pobierz[?sciezka][&podglad=1]` | hasło (`X-Haslo`) ALBO ważne ciasteczko linku (zwykły odnośnik `<a href>`, bez blob:) | plik (Range); folder = ZIP; pobranie liczone raz (Range od środka nie) |
+| `GET /api/publiczny/<id>/zip[?sciezka=/podfolder]` | hasło ALBO ciasteczko linku | cały folder (albo podfolder) strumieniem ZIP przez transfery (`kto` = `link:<id>`), `ZaliczPobranie` raz; plik zamiast folderu = 400, poza linkiem = 400 |
 
 ## Administracja (admin)
 
@@ -105,8 +117,7 @@ transfery i łączny wykres prędkości z ostatnich 5 minut.
 | `GET /api/miniatura?udzial&sciezka&rozmiar=s\|m` | JPEG, `Cache-Control: private, max-age=86400`; nie obraz / format bez miniatury / za duży / uszkodzony = 404, zły rozmiar = 400; bez transferu i dziennika |
 | `GET /api/suma?udzial&sciezka` | `{"sha256"}` (liczone strumieniowo, pamięć podręczna wg rozmiaru i daty); prawo pobierania; folder = 404 |
 | `GET /api/konta/urzadzenia` / `DELETE /api/konta/urzadzenia?id` | sesje bieżącego konta `{"id","ip","przegladarka","utworzono","ostatnio","biezaca"}`; usunięcie cudzej albo nieznanej = 404 |
-| `POST /api/konta/2fa/start` → `{"sekret","adres_otpauth"}`; `POST /api/konta/2fa/wlacz {"kod"}`; `POST /api/konta/2fa/wylacz {"haslo"}`; logowanie: `{"login","haslo","kod"?}` → 401 `{"blad","wymaga_kodu":true}`, zły kod = 401 bez `wymaga_kodu`; `wlacz` zły kod = 400; `wylacz` złe hasło = 403; ponowny `start` / `wylacz` bez 2FA = 409 |
 
-Usługa wyłączona (pole `Monitor`/`Indeks`/`Miniatury`/`Sumy` w `Zaleznosci` = nil) = 503 `{"blad"}`. `GET /api/stan`: `wersja` = wersja wydania (`WersjaBudowy`), dodatkowe pole `ma_2fa`. `GET /api/pulpit`: `udzialy[].wolne/razem` z dysku pod folderem udziału.
+Usługa wyłączona (pole `Monitor`/`Indeks`/`Miniatury`/`Sumy` w `Zaleznosci` = nil) = 503 `{"blad"}`. `GET /api/stan`: `wersja` = wersja wydania (`WersjaBudowy`). `GET /api/pulpit`: `udzialy[].wolne/razem` z dysku pod folderem udziału.
 
 `Probka`: `{"czas","cpu_proc","ram_uzyte","ram_razem","dysk_odczyt_bps","dysk_zapis_bps","siec":[{"interfejs","rodzaj","wysylanie_bps","odbior_bps"}],"wysylanie_bps","odbior_bps","polaczenia","transfery","gorutyny","pamiec_procesu"}`.

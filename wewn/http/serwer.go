@@ -87,11 +87,7 @@ type (
 	}
 	uslugaKont interface {
 		CzyPusto() bool
-		ZalogujZKodem(login, haslo, kod, ip string) (rdzen.Uzytkownik, error)
-		Start2FA(login string) (string, string, error)
-		Wlacz2FA(login, kod string) error
-		Wylacz2FA(login, haslo string) error
-		Ma2FA(login string) bool
+		Zaloguj(login, haslo, ip string) (rdzen.Uzytkownik, error)
 		Uzytkownik(login string) (rdzen.Uzytkownik, error)
 		Lista() []rdzen.Uzytkownik
 		Dodaj(u rdzen.Uzytkownik, haslo string) error
@@ -124,6 +120,7 @@ type (
 	// transfer: uchwyt jednego przesyłu (transfery.Transfer).
 	transfer interface {
 		PiszDo(dst io.Writer) io.Writer
+		CzytajZ(src io.Reader) io.Reader
 		Zakoncz(wynik string)
 	}
 	uslugaTransferow interface {
@@ -185,10 +182,16 @@ type serwer struct {
 	kreatorMutex sync.Mutex
 	statyczne    *pamiecStatycznych
 	publiczny    pamiecAdresuPublicznego
+	// wgrania: aktywne wgrania HTTP (jeden transfer na plik).
+	wgrania wgraniaHTTP
+	// kluczLinkow: losowy klucz HMAC ciasteczek linków publicznych (tylko w pamięci procesu).
+	kluczLinkow []byte
 }
 
 func nowySerwer(u uslugi) *serwer {
-	return &serwer{uslugi: u, start: u.teraz(), statyczne: nowaPamiecStatycznych(u.statyczne)}
+	return &serwer{
+		uslugi: u, start: u.teraz(), statyczne: nowaPamiecStatycznych(u.statyczne), kluczLinkow: nowyKluczLinkow(),
+	}
 }
 
 // obsluga: trasy + pośrednicy (od zewnątrz: odzyskiwanie, nagłówki, sesja, CSRF).
@@ -201,6 +204,7 @@ func (s *serwer) obsluga() nethttp.Handler {
 	s.trasyUdostepnien(m)
 	s.trasyAdmina(m)
 	s.trasyFali2(m)
+	s.trasyKosza(m)
 	m.HandleFunc("/", s.plikStatyczny)
 	return s.odzyskiwanie(naglowkiBezpieczenstwa(s.sesjaWKontekscie(ochronaCSRF(m))))
 }

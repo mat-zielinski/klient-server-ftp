@@ -218,3 +218,30 @@ func TestFTPSZamkniecieKontekstem(t *testing.T) {
 		t.Fatal("serwer dalej przyjmuje połączenia")
 	}
 }
+
+// Kanał danych po RETR: cała treść, close_notify i 226, także gdy klient dosłał coś na kanał danych
+// (bez łagodnego zamykania serwer zrywa połączenie przez RST, curl ze Schannel kończy kodem 56).
+func TestFTPSZamkniecieKanaluDanych(t *testing.T) {
+	s := nowySerwerTestowy(t)
+	tresc := []byte(strings.Repeat("0123456789abcdef", 4096)) // 64 KiB: mieści się w buforach gniazd
+	if err := os.WriteFile(filepath.Join(s.katalog["publiczny"], "b.bin"), tresc, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	k := polacz(t, s.adres, s.pula)
+	k.zaloguj("ola", hasloTestowe)
+	for i := range 3 {
+		w := k.pobierzJakSchannel("/publiczny/b.bin")
+		if w.blad != nil || string(w.dane) != string(tresc) {
+			t.Fatalf("próba %d: odebrano %d z %d bajtów, błąd %v", i, len(w.dane), len(tresc), w.blad)
+		}
+		if !w.closeNotify {
+			t.Fatalf("próba %d: kanał danych zamknięty bez close_notify", i)
+		}
+		if w.kod != 226 {
+			t.Fatalf("próba %d: kod końcowy %d", i, w.kod)
+		}
+	}
+	if kod, b := k.pobierz("/publiczny/a.txt", 0); kod != 226 || string(b) != "0123456789" {
+		t.Fatalf("zwykłe RETR po próbach: %d %q", kod, b)
+	}
+}

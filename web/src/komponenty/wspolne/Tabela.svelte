@@ -18,6 +18,8 @@
   // Zwarta tabela (jak listy stacji): jasny nagłówek WIELKIMI literami, wiersze z kreską, podświetlenie pod myszą.
   // Snippet `wiersz` renderuje CAŁY wiersz <tr> z komórkami <td> w kolejności kolumn (zdarzenia, zaznaczenie,
   // menu kontekstowe zostają po stronie strony). Ukrywanie kolumn działa po numerze kolumny.
+  // Kolumna ukryta (ukryjPonizej) wypada naraz z <colgroup> i nagłówka, a jej komórka <td> w wierszach dostaje
+  // display:none (po numerze kolumny), więc reszta komórek trafia pod właściwe nagłówki.
   // Klasy pomocnicze dla komórek: .prawo, .srodek, .mono, .opis, .skroc; wiersz: .zaznaczony.
   import type { Snippet } from 'svelte'
   import { uklad } from '../../stan/uklad.svelte'
@@ -55,8 +57,18 @@
   )
   const stylUkrycia = $derived(
     ukryte.length
-      ? `<style>${ukryte.map((n) => `[data-tabela="${id}"] tr > :nth-child(${n})`).join(',')}{display:none}</style>`
+      ? `<style>${ukryte.map((n) => `[data-tabela="${id}"] tbody tr > :nth-child(${n})`).join(',')}{display:none}</style>`
       : '',
+  )
+
+  /** Kolumny widoczne przy bieżącej szerokości okna: tylko one trafiają do <colgroup> i nagłówka. */
+  const widoczne = $derived(kolumny.filter((k) => !(k.ukryjPonizej && uklad.ponizej(k.ukryjPonizej))))
+  /** Najmniejsza szerokość tabeli: suma szerokości kolumn (kolumna bez szerokości liczona jak 'l'); węższe okno
+   *  przewija tabelę w poziomie zamiast ściskać kolumnę główną do zera. Kolumny w % pomijane. */
+  const minSzerokosc = $derived(
+    `calc(${widoczne
+      .map((k) => (!k.szerokosc ? 'var(--kolumna-l)' : SZEROKOSCI.includes(k.szerokosc) ? `var(--kolumna-${k.szerokosc})` : '0%'))
+      .join(' + ')})`,
   )
 
   function szerokosc(k: KolumnaTabeli): string | undefined {
@@ -74,13 +86,13 @@
 
 {@html stylUkrycia}
 <div class="tabela" data-tabela={id}>
-  <table>
+  <table style:min-width={minSzerokosc}>
     <colgroup>
-      {#each kolumny as k (k.klucz)}<col style:width={szerokosc(k)} />{/each}
+      {#each widoczne as k (k.klucz)}<col style:width={szerokosc(k)} />{/each}
     </colgroup>
     <thead class:przyklejony>
       <tr>
-        {#each kolumny as k (k.klucz)}
+        {#each widoczne as k (k.klucz)}
           {@const sortowalna = !!naSortuj && k.sortowalna !== false}
           <th
             class={k.wyrownanie ?? 'lewo'}

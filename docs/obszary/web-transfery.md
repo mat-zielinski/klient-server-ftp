@@ -61,3 +61,12 @@ funkcji `podzialki`, `sciezkaGladka`, `najblizszy`, `granice`, `odmiana` (esbuil
 2. Nie sprawdzono na żywo z serwerem (SSE, eksport CSV, przerwanie) ani zrzutów w obu motywach.
 3. Statystyki liczą tylko pobrania (każdy wynik); `protokoly` to bajty wg protokołu (ustalenie z sesją główną).
 4. Kafel „Klienci” liczy pozycje rankingu z serwera (kontrakt nie ma liczby wszystkich klientów).
+
+## Poprawki po pierwszym uruchomieniu (2026-11-27)
+
+- Karta „Adresy serwera” (`KartaAdresow.svelte`): w trybie VPN adres publiczny wyszarzony z pigułką „Niedostępny
+  w trybie VPN”, bez kopiowania; adres WireGuard (albo LAN) wyróżniony jako „Zalecany dla klientów”.
+- Dziennik odświeża statystyki i tabelę sam, 1,5 s po zdarzeniu „koniec” transferu (kilka końców = jedno
+  odświeżenie), tylko gdy zakres obejmuje „teraz”; pigułka „Na żywo” w pasku zakresu.
+- `TabelaDziennika` ma opcjonalny licznik `odswiezenie` (wymusza ponowne pobranie przy tych samych granicach).
+- Dziennik otwiera własne połączenie SSE (osobne od Pulpitu).

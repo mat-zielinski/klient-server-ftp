@@ -49,6 +49,23 @@ kreator, usługa Windows i ikona w zasobniku jeszcze nie działają.
    - Udostępnienia: linki publiczne z datą wygaśnięcia, hasłem i limitem pobrań.
    - Usunięte pliki trafiają do kosza aplikacji: folder .skrytka_kosz w korzeniu udziału.
 
+6. Linux (serwer z systemd: Debian, Ubuntu, Fedora, Raspberry Pi OS 64-bit)
+   Pobierz paczkę skrytka-<wersja>-linux-amd64.tar.gz (komputer x86) albo -linux-arm64 (Raspberry Pi), rozpakuj
+   i zainstaluj jako root:
+     tar -xzf skrytka-<wersja>-linux-amd64.tar.gz
+     cd skrytka-<wersja>-linux-amd64
+     sudo sh instaluj-linux.sh            (z pytaniem o porty w zaporze; --tak = bez pytań, porty zamknięte)
+   Skrypt zakłada użytkownika systemowego skrytka, kopiuje program do /opt/skrytka, dane i logi trzyma
+   w /var/lib/skrytka (dane/, logi/), zapisuje i uruchamia usługę systemd (start z systemem), dodaje ikonę
+   „Skrytka” w menu (otwiera panel https://127.0.0.1:8443 w przeglądarce) i na koniec wypisuje adresy.
+   Zapora ufw albo firewalld: skrypt pyta, czy otworzyć 8443, 2121 i 50000-50100 (domyślnie nie).
+   Kreator: otwórz https://127.0.0.1:8443 na tym komputerze (albo adres LAN z innego) i przejdź punkt 2.
+   Udostępniane foldery muszą być czytelne (do wgrywania też zapisywalne) dla użytkownika skrytka, np.
+     sudo setfacl -R -m u:skrytka:rX /srv/udostepnione
+   Aktualizacja: rozpakuj nowszą paczkę i uruchom instaluj-linux.sh ponownie (dane zostają).
+   Komunikaty: journalctl -u skrytka -f    Stan: systemctl status skrytka
+   Usuwanie: sudo sh /opt/skrytka/odinstaluj-linux.sh (dane zostają); z --z-danymi także dane i użytkownik.
+
 Uwagi
 -----
 - Pliki tego komputera (nie kopiuj ich innym osobom i nie wysyłaj nigdzie):

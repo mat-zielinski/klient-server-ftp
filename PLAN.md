@@ -124,7 +124,7 @@ VPN) jest po sprincie 2, ok. 5–6 h od startu.
 | **Szybkie wyszukiwanie** | indeks plików w tle (jak FileBrowser Quantum), odświeżany przy zmianach, wyniki w milisekundach | indeks |
 | **Miniatury** | obrazy (jpg, png, gif, webp) skalowane w tle, pamięć podręczna na dysku, kafelki i galeria | miniatury |
 | **UX klasy premium** | paleta poleceń Ctrl+K, skróty klawiszowe z pomocą „?”, wirtualizacja list (10 000+ plików bez przycięć), galeria ze strzałkami, kod QR linku (telefon), PWA (instalacja na telefonie), motyw automatyczny wg systemu, puste stany i szkielety ładowania | web-pro |
-| **Bezpieczeństwo** | 2FA (TOTP, aplikacja Authenticator) dla kont, lista zalogowanych urządzeń z wylogowaniem, limit szybkości API, suma SHA-256 pliku do sprawdzenia pobrania | konta, http |
+| **Bezpieczeństwo** | lista zalogowanych urządzeń z wylogowaniem, limit szybkości API, suma SHA-256 pliku do sprawdzenia pobrania (2FA usunięte decyzją usera 2026-11-28) | konta, http |
 | **Limity** | limit przepustowości na użytkownika i globalny (np. żeby pobieranie nie zapchało łącza) | transfery |
 | **Jakość i wydania** | GitHub Actions: budowa i testy na Windows i Linux przy każdym pushu, wydanie z binarkami przy tagu `v*`; Dependabot | ci |
 | **Operacje** | `/api/zdrowie`, rotacja logów, kopia ustawień do pliku, sprawdzanie nowej wersji w GitHub Releases | http, aplikacja |

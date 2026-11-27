@@ -3,6 +3,7 @@ module skrytka
 go 1.27
 
 require (
+	fyne.io/systray v1.12.2
 	github.com/fclairamb/ftpserverlib v0.33.3
 	github.com/spf13/afero v1.15.0
 	golang.org/x/crypto v0.59.0
@@ -11,4 +12,16 @@ require (
 	golang.org/x/text v0.44.0
 )
 
-require golang.org/x/net v0.62.0 // indirect
+require (
+	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
+	github.com/godbus/dbus/v5 v5.1.0 // indirect
+	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
+	github.com/russross/blackfriday/v2 v2.1.0 // indirect
+	github.com/tc-hib/go-winres v0.3.3 // indirect
+	github.com/tc-hib/winres v0.2.1 // indirect
+	github.com/urfave/cli/v2 v2.25.7 // indirect
+	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
+	golang.org/x/net v0.62.0 // indirect
+)
+
+tool github.com/tc-hib/go-winres

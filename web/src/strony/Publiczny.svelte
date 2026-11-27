@@ -1,19 +1,19 @@
 <script lang="ts">
   // Strona linku publicznego /s/<id> (bez logowania): nazwa pliku lub folderu, rozmiar, data wygaśnięcia, pole
-  // hasła gdy link go wymaga, przycisk Pobierz; dla folderu lista plików z pobieraniem pojedynczych plików.
-  // Wygasły link (410) albo nieistniejący (404) = jasny komunikat zamiast formularza.
+  // hasła gdy link go wymaga (oko + Caps Lock). Plik: duży przycisk Pobierz. Folder: okruszki, wchodzenie
+  // w podfoldery, pobieranie pojedynczych plików i „Pobierz wszystko (ZIP)”. Po poprawnym haśle serwer ustawia
+  // ciasteczko linku, więc pobieranie to zwykłe odnośniki. Wygasły link (410) albo nieistniejący (404) = komunikat.
   import { onMount } from 'svelte'
   import { BladApi, trescBledu } from '../api/klient'
   import type { Wpis } from '../api/typy'
   import { IKONA_RODZAJU } from '../ikony/ikony'
   import EkranSrodkowy from '../komponenty/admin/EkranSrodkowy.svelte'
-  import Komunikat from '../komponenty/admin/Komunikat.svelte'
   import { maDate } from '../komponenty/admin/narzedzia'
-  import { adresPobraniaLinku, infoLinku, pobierzZHaslem } from '../komponenty/admin/publiczny'
+  import { adresPobraniaLinku, adresZipLinku, infoLinku, okruszki } from '../komponenty/admin/publiczny'
   import { KOD_BRAK_DOSTEPU, KOD_NIE_ZNALEZIONO, KOD_WYGASLO, KOD_ZAKAZ } from '../komponenty/admin/stale'
   import type { InfoPubliczne } from '../komponenty/admin/typy'
   import Ikona from '../komponenty/wspolne/Ikona.svelte'
-  import Pole from '../komponenty/wspolne/Pole.svelte'
+  import PoleHasla from '../komponenty/wspolne/PoleHasla.svelte'
   import Przycisk from '../komponenty/wspolne/Przycisk.svelte'
   import Pusto from '../komponenty/wspolne/Pusto.svelte'
   import { data, rozmiar } from '../stan/format'
@@ -24,22 +24,28 @@
   const id = nawigacja.publiczny ?? ''
   let stan = $state<Stan>('wczytywanie')
   let info = $state<InfoPubliczne | null>(null)
+  let nazwaKorzenia = $state('')
+  let sciezka = $state('')
   let haslo = $state('')
-  let zatwierdzoneHaslo = $state('')
   let bladHasla = $state('')
   let blad = $state('')
   let trwa = $state(false)
-  let pobierane = $state('')
 
   const pliki = $derived<Wpis[]>(
     [...(info?.wpisy ?? [])].sort((a, b) => +b.folder - +a.folder || a.nazwa.localeCompare(b.nazwa, 'pl')),
   )
+  const sciezkaOkruszkow = $derived(okruszki(nazwaKorzenia || info?.nazwa || '', sciezka))
 
-  async function wczytaj(h: string) {
+  /** Wczytuje korzeń albo podfolder; `h` puste = poleganie na ciasteczku linku. */
+  async function wczytaj(h: string, s: string) {
     trwa = true
     try {
-      info = await infoLinku(id, h)
-      zatwierdzoneHaslo = h
+      const nowe = await infoLinku(id, h, s || undefined)
+      info = nowe
+      sciezka = s
+      if (!s) nazwaKorzenia = nowe.nazwa
+      haslo = ''
+      bladHasla = ''
       stan = 'gotowe'
     } catch (b) {
       obsluzBlad(b, h)
@@ -66,31 +72,20 @@
   function wyslijHaslo(e: Event) {
     e.preventDefault()
     if (!haslo) return
-    void wczytaj(haslo)
+    void wczytaj(haslo, sciezka)
   }
 
-  async function pobierz(nazwa: string, sciezka?: string) {
-    if (!zatwierdzoneHaslo) {
-      location.href = adresPobraniaLinku(id, sciezka)
-      return
-    }
-    pobierane = sciezka ?? nazwa
-    try {
-      await pobierzZHaslem(id, zatwierdzoneHaslo, nazwa, sciezka)
-    } catch (b) {
-      obsluzBlad(b, zatwierdzoneHaslo)
-    } finally {
-      pobierane = ''
-    }
+  function otworz(s: string) {
+    if (!trwa) void wczytaj('', s)
   }
 
   onMount(() => {
     if (!id) stan = 'brak'
-    else void wczytaj('')
+    else void wczytaj('', '')
   })
 </script>
 
-<EkranSrodkowy podtytul={info?.folder ? "Udostępniony folder" : "Udostępniony plik"} szeroka={info?.folder ?? false}>
+<EkranSrodkowy podtytul={info?.folder ? 'Udostępniony folder' : 'Udostępniony plik'} szeroka={info?.folder ?? false}>
   {#if stan === 'wczytywanie'}
     <Pusto ikona="klepsydra" tytul="Otwieranie linku…" />
   {:else if stan === 'wygasl'}
@@ -100,7 +95,7 @@
     <Pusto ikona="link" tytul="Nie ma takiego linku" opis="Sprawdź, czy adres jest pełny, albo poproś autora o nowy." />
   {:else if stan === 'blad'}
     <Pusto ikona="blad" tytul="Nie udało się otworzyć linku" opis={blad}>
-      <Przycisk ikona="odswiez" onclick={() => wczytaj(zatwierdzoneHaslo)}>Spróbuj ponownie</Przycisk>
+      <Przycisk ikona="odswiez" onclick={() => wczytaj('', sciezka)}>Spróbuj ponownie</Przycisk>
     </Pusto>
   {:else if stan === 'haslo'}
     <form class="formularz" onsubmit={wyslijHaslo} novalidate>
@@ -111,7 +106,7 @@
           <p class="opis">Hasło przekazał Ci autor linku.</p>
         </div>
       </div>
-      <Pole etykieta="Hasło" typ="password" bind:value={haslo} ikona="klucz" autocomplete="off" autofocus
+      <PoleHasla etykieta="Hasło linku" bind:value={haslo} ikona="klucz" autocomplete="off" autofocus
         blad={bladHasla || undefined} />
       <Przycisk rodzaj="glowny" typ="submit" ikona="klodka_otwarta" rozmiar="duzy" wylaczony={!haslo || trwa}>
         {trwa ? 'Sprawdzanie…' : 'Otwórz'}
@@ -122,7 +117,7 @@
       <div class="naglowek">
         <span class="duza-ikona"><Ikona nazwa={info.folder ? 'folder' : 'plik'} rozmiar="l" /></span>
         <div class="tytul">
-          <h2 class="skroc" title={info.nazwa}>{info.nazwa}</h2>
+          <h2 class="skroc" title={nazwaKorzenia || info.nazwa}>{nazwaKorzenia || info.nazwa}</h2>
           <p class="opis">
             {info.folder ? `Folder, ${pliki.length} pozycji` : rozmiar(info.rozmiar)}
             {#if maDate(info.wygasa)} · ważny do {data(info.wygasa)}{/if}
@@ -132,30 +127,51 @@
       </div>
 
       {#if !info.folder}
-        <Przycisk rodzaj="glowny" ikona="pobierz" rozmiar="duzy" wylaczony={!!pobierane} onclick={() => pobierz(info!.nazwa)}>
-          {pobierane ? 'Pobieranie…' : `Pobierz (${rozmiar(info.rozmiar)})`}
-        </Przycisk>
-        {#if zatwierdzoneHaslo}
-          <Komunikat rodzaj="info">Plik pobiera się w tle; przeglądarka zapisze go po pobraniu całości.</Komunikat>
-        {/if}
-      {:else if pliki.length === 0}
-        <Pusto ikona="folder_otwarty" tytul="Folder jest pusty" />
+        <a class="przycisk glowny duzy" href={adresPobraniaLinku(id)} download={info.nazwa}>
+          <Ikona nazwa="pobierz" />Pobierz ({rozmiar(info.rozmiar)})
+        </a>
       {:else}
-        <ul class="lista">
-          {#each pliki as w (w.sciezka)}
-            <li>
-              <span class="ikona-wpisu"><Ikona nazwa={IKONA_RODZAJU[w.rodzaj] ?? 'plik'} /></span>
-              <span class="nazwa skroc" title={w.nazwa}>{w.nazwa}</span>
-              {#if w.folder}
-                <span class="opis">Folder</span>
+        <div class="pasek-folderu">
+          <nav class="okruszki" aria-label="Ścieżka folderu">
+            {#each sciezkaOkruszkow as o, i (o.sciezka)}
+              {#if i > 0}<Ikona nazwa="w_prawo" rozmiar="s" />{/if}
+              {#if i === sciezkaOkruszkow.length - 1}
+                <span class="okruszek biezacy skroc" aria-current="page">{o.nazwa}</span>
               {:else}
-                <span class="opis mono">{rozmiar(w.rozmiar)}</span>
-                <Przycisk rodzaj="duch" rozmiar="maly" ikona="pobierz" tytul="Pobierz {w.nazwa}"
-                  wylaczony={pobierane === w.sciezka} onclick={() => pobierz(w.nazwa, w.sciezka)} />
+                <button type="button" class="okruszek skroc" onclick={() => otworz(o.sciezka)}>{o.nazwa}</button>
               {/if}
-            </li>
-          {/each}
-        </ul>
+            {/each}
+          </nav>
+          <a class="przycisk zwykly" href={adresZipLinku(id, sciezka || undefined)} download>
+            <Ikona nazwa="archiwum" rozmiar="s" />Pobierz wszystko (ZIP)
+          </a>
+        </div>
+        {#if pliki.length === 0}
+          <Pusto ikona="folder_otwarty" tytul="Folder jest pusty" />
+        {:else}
+          <ul class="lista" aria-busy={trwa}>
+            {#each pliki as w (w.sciezka)}
+              <li>
+                <span class="ikona-wpisu" class:folder={w.folder}>
+                  <Ikona nazwa={IKONA_RODZAJU[w.rodzaj] ?? (w.folder ? 'folder' : 'plik')} />
+                </span>
+                {#if w.folder}
+                  <button type="button" class="nazwa wejdz skroc" title="Otwórz {w.nazwa}" onclick={() => otworz(w.sciezka)}>
+                    {w.nazwa}
+                  </button>
+                  <Ikona nazwa="w_prawo" rozmiar="s" />
+                {:else}
+                  <span class="nazwa skroc" title={w.nazwa}>{w.nazwa}</span>
+                  <span class="opis mono">{rozmiar(w.rozmiar)}</span>
+                  <a class="przycisk duch maly sama-ikona" href={adresPobraniaLinku(id, w.sciezka)} download={w.nazwa}
+                    title="Pobierz {w.nazwa}" aria-label="Pobierz {w.nazwa}">
+                    <Ikona nazwa="pobierz" rozmiar="s" />
+                  </a>
+                {/if}
+              </li>
+            {/each}
+          </ul>
+        {/if}
       {/if}
     </div>
   {/if}
@@ -177,6 +193,9 @@
   .tytul {
     min-width: 0;
   }
+  h2 {
+    margin: 0;
+  }
   .duza-ikona {
     flex: none;
     display: inline-flex;
@@ -188,6 +207,88 @@
     background: var(--kolor-tlo-info);
     color: var(--kolor-niebieski);
   }
+  /* odnośniki w wyglądzie Przycisk (pobieranie zwykłym linkiem, z ciasteczkiem linku) */
+  .przycisk {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--odstep-s);
+    height: var(--wysokosc-przycisk);
+    padding: 0 var(--odstep-xl);
+    border-radius: var(--promien-przycisk);
+    background: var(--kolor-przycisk);
+    color: var(--kolor-tekst);
+    font-size: var(--czcionka-maly);
+    font-weight: var(--czcionka-polgruby);
+    white-space: nowrap;
+    text-decoration: none;
+    transition: background var(--czas-szybki), filter var(--czas-szybki);
+  }
+  .przycisk:hover {
+    background: var(--kolor-przycisk-hover);
+  }
+  .przycisk:focus-visible {
+    outline: var(--odstep-ramka) solid var(--kolor-niebieski);
+    outline-offset: var(--odstep-pozycje);
+  }
+  .glowny {
+    background: var(--kolor-niebieski-tlo);
+    color: var(--kolor-na-ciemnym);
+  }
+  .glowny:hover {
+    background: var(--kolor-niebieski-tlo);
+    filter: brightness(1.1);
+  }
+  .duzy {
+    height: var(--wysokosc-przycisk-duzy);
+    font-size: var(--czcionka-tekst);
+  }
+  .duch {
+    background: transparent;
+    border: var(--ramka);
+  }
+  .maly {
+    height: var(--wysokosc-przycisk-maly);
+  }
+  .sama-ikona {
+    flex: none;
+    width: var(--wysokosc-przycisk-maly);
+    padding: 0;
+  }
+  .pasek-folderu {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--odstep-m);
+  }
+  .okruszki {
+    display: flex;
+    align-items: center;
+    gap: var(--odstep-xs);
+    min-width: 0;
+    flex: 1 1 auto;
+    color: var(--kolor-opis);
+    font-size: var(--czcionka-maly);
+  }
+  .okruszek {
+    max-width: var(--kolumna-l);
+    padding: var(--odstep-pozycje) var(--odstep-xs);
+    border: 0;
+    border-radius: var(--promien-segment);
+    background: none;
+    color: var(--kolor-niebieski);
+    font-size: var(--czcionka-maly);
+    cursor: pointer;
+  }
+  .okruszek:hover {
+    background: var(--kolor-przycisk);
+  }
+  .okruszek.biezacy {
+    color: var(--kolor-tekst);
+    font-weight: var(--czcionka-polgruby);
+    cursor: default;
+  }
   .lista {
     list-style: none;
     margin: 0;
@@ -197,12 +298,16 @@
     max-height: var(--uklad-okno-maks-h);
     overflow: auto;
   }
+  .lista[aria-busy='true'] {
+    opacity: var(--uklad-suwak-przygaszenie);
+  }
   .lista li {
     display: flex;
     align-items: center;
     gap: var(--odstep-m);
     min-height: var(--wysokosc-wiersz-tabeli);
     padding: var(--odstep-xs) var(--odstep-l);
+    color: var(--kolor-opis);
   }
   .lista li + li {
     border-top: var(--ramka);
@@ -214,7 +319,23 @@
     display: inline-flex;
     color: var(--kolor-opis);
   }
+  .ikona-wpisu.folder {
+    color: var(--kolor-niebieski);
+  }
   .nazwa {
     flex: 1 1 auto;
+    color: var(--kolor-tekst);
+  }
+  .wejdz {
+    padding: 0;
+    border: 0;
+    background: none;
+    text-align: left;
+    font-size: inherit;
+    cursor: pointer;
+  }
+  .wejdz:hover {
+    color: var(--kolor-niebieski);
+    text-decoration: underline;
   }
 </style>

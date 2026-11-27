@@ -1,5 +1,7 @@
 package konfiguracja
 
+import "time"
+
 // Stałe obszaru „magazyn” (dostęp do dysku).
 
 const (
@@ -19,12 +21,25 @@ const (
 	MagazynFormatZnacznikaKosza = "2006-01-02_15-04-05"
 	// MagazynMaksProbKosza: ile wariantów nazwy (_2, _3 …) próbować, gdy znacznik jest zajęty.
 	MagazynMaksProbKosza = 1000
+	// MagazynPrzyrostekOpisuKosza: plik <znacznik>.json obok folderu znacznika z oryginalną ścieżką elementu.
+	MagazynPrzyrostekOpisuKosza = ".json"
+	// MagazynMaksDlugoscIDKosza: najdłuższy przyjmowany identyfikator wpisu kosza (base64url ścieżki).
+	MagazynMaksDlugoscIDKosza = 4096
 	// MagazynLiczbaBlokad: liczba blokad (paskowanie po ścieżce) dla zapisu i kawałków.
 	MagazynLiczbaBlokad = 64
 	// MagazynUprawnieniaFolderu: nowe foldery w udziale (Windows i tak dziedziczy ACL).
 	MagazynUprawnieniaFolderu = 0o755
 	// MagazynUprawnieniaCzesci: plik kawałków wgrywania.
 	MagazynUprawnieniaCzesci = 0o644
+)
+
+const (
+	// KoszOproznijPoDniach: automatyczne opróżnianie kosza usuwa trwale wpisy starsze niż tyle dni.
+	KoszOproznijPoDniach = 30
+	// KoszWiekAutomatycznegoOprozniania: to samo jako czas trwania (argument Magazyn.Oproznij).
+	KoszWiekAutomatycznegoOprozniania = KoszOproznijPoDniach * 24 * time.Hour
+	// KoszOkresOprozniania: jak często aplikacja uruchamia automatyczne opróżnianie (raz na dobę).
+	KoszOkresOprozniania = 24 * time.Hour
 )
 
 // MagazynUkryteSystemowe: nazwy plików systemowych Windows i Linux ukrywane w listach (bez wielkości liter).

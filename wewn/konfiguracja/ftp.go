@@ -1,5 +1,7 @@
 package konfiguracja
 
+import "time"
+
 // Stałe obszaru „ftp” (serwer FTPS, wewn/ftp). Właściciel: agent „ftp”.
 const (
 	// FTPMaksPolaczenNaIP: najwięcej jednoczesnych połączeń sterujących z jednego adresu IP
@@ -18,4 +20,9 @@ const (
 	// FTPPrawaFolderu i FTPPrawaPliku: tryb pokazywany w liście (LIST); zapis i tak sprawdza bramka.
 	FTPPrawaFolderu = 0o755
 	FTPPrawaPliku   = 0o644
+	// FTPZamykanieDanych: najdłużej tyle po wysłaniu danych i close_notify czekamy, aż klient zamknie kanał
+	// danych (odczyt resztek w tle, żeby system nie zerwał połączenia przez RST i klient dostał całość).
+	FTPZamykanieDanych = 10 * time.Second
+	// FTPZamykanieDanychBajty: najwięcej bajtów resztek od klienta wyrzucanych przy łagodnym zamykaniu.
+	FTPZamykanieDanychBajty = 64 << 10
 )

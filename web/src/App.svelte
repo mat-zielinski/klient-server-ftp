@@ -37,6 +37,8 @@
       podtytul: 'Historia pobrań i statystyki', opis: 'Kto, co i kiedy pobrał' },
     { klucz: 'udostepnienia', etykieta: 'Udostępnienia', ikona: 'link', plik: 'Udostepnienia', tylkoAdmin: false,
       podtytul: 'Linki publiczne z datą ważności i hasłem', opis: 'Linki publiczne' },
+    { klucz: 'kosz', etykieta: 'Kosz', ikona: 'kosz', plik: 'Kosz', tylkoAdmin: false,
+      podtytul: 'Usunięte pliki: przywracanie i trwałe usuwanie', opis: 'Usunięte pliki i foldery' },
     { klucz: 'uzytkownicy', etykieta: 'Użytkownicy', ikona: 'uzytkownicy', plik: 'Uzytkownicy', tylkoAdmin: true,
       podtytul: 'Konta, uprawnienia do folderów i dostęp FTPS', opis: 'Konta i uprawnienia' },
     { klucz: 'ustawienia', etykieta: 'Ustawienia', ikona: 'ustawienia', plik: 'Ustawienia', tylkoAdmin: true,

@@ -3,14 +3,9 @@ package http
 import (
 	"bufio"
 	"context"
-	"crypto/hmac"
-	"crypto/sha1"
 	"crypto/sha256"
-	"encoding/base32"
-	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"image"
 	"image/color"
 	"image/png"
@@ -29,67 +24,6 @@ import (
 	"skrytka/wewn/uslugi/indeks"
 	"skrytka/wewn/uslugi/monitor"
 )
-
-// kodTOTP: RFC 6238 (HMAC-SHA1, 6 cyfr) do testu logowania z 2FA.
-func kodTOTP(t *testing.T, sekret string, czas time.Time) string {
-	t.Helper()
-	klucz, err := base32.StdEncoding.WithPadding(base32.NoPadding).DecodeString(strings.ToUpper(sekret))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var licznik [8]byte
-	binary.BigEndian.PutUint64(licznik[:], uint64(czas.Unix()/int64(konfiguracja.TOTPOkres/time.Second)))
-	m := hmac.New(sha1.New, klucz)
-	m.Write(licznik[:])
-	h := m.Sum(nil)
-	o := h[len(h)-1] & 0x0f
-	v := binary.BigEndian.Uint32(h[o:o+4]) & 0x7fffffff
-	return fmt.Sprintf("%06d", v%1000000)
-}
-
-func TestDwaFA(t *testing.T) {
-	sr := noweSrodowisko(t, true)
-	w := sr.wykonaj(zadanie{metoda: "POST", adres: "/api/konta/2fa/start", login: "jan"})
-	var start struct {
-		Sekret string `json:"sekret"`
-		Adres  string `json:"adres_otpauth"`
-	}
-	if err := json.Unmarshal(w.Body.Bytes(), &start); err != nil || start.Sekret == "" ||
-		!strings.HasPrefix(start.Adres, "otpauth://") {
-		t.Fatalf("start: %d %s", w.Code, w.Body)
-	}
-	t0 := time.Now()
-	logowanie := func(kod string) string {
-		return `{"login":"jan","haslo":"` + hasloTestowe + `","kod":"` + kod + `"}`
-	}
-	kroki := []struct {
-		nazwa, metoda, adres, cialo, login string
-		kod                                int
-		zawiera                            string
-	}{
-		{"zły kod przy włączaniu", "POST", "/api/konta/2fa/wlacz", `{"kod":"000000x"}`, "jan", 400, ""},
-		{"włącz", "POST", "/api/konta/2fa/wlacz", `{"kod":"` + kodTOTP(t, start.Sekret, t0) + `"}`, "jan", 200, ""},
-		{"ponowny start", "POST", "/api/konta/2fa/start", "", "jan", 409, ""},
-		{"stan", "GET", "/api/stan", "", "jan", 200, `"ma_2fa":true`},
-		{"logowanie bez kodu", "POST", "/api/logowanie", logowanie(""), "", 401, `"wymaga_kodu":true`},
-		{"logowanie złym kodem", "POST", "/api/logowanie", logowanie("123456x"), "", 401, "kod"},
-		{"logowanie dobrym kodem", "POST", "/api/logowanie",
-			logowanie(kodTOTP(t, start.Sekret, t0.Add(konfiguracja.TOTPOkres))), "", 200, `"login":"jan"`},
-		{"wyłącz złym hasłem", "POST", "/api/konta/2fa/wylacz", `{"haslo":"zle-haslo-123"}`, "jan", 403, ""},
-		{"wyłącz", "POST", "/api/konta/2fa/wylacz", `{"haslo":"` + hasloTestowe + `"}`, "jan", 200, ""},
-		{"wyłącz ponownie", "POST", "/api/konta/2fa/wylacz", `{"haslo":"` + hasloTestowe + `"}`, "jan", 409, ""},
-		{"bez sesji", "POST", "/api/konta/2fa/start", "", "", 401, ""},
-	}
-	for _, k := range kroki {
-		w := sr.wykonaj(zadanie{metoda: k.metoda, adres: k.adres, cialo: k.cialo, login: k.login})
-		if w.Code != k.kod || !strings.Contains(w.Body.String(), k.zawiera) {
-			t.Fatalf("%s: kod %d: %s", k.nazwa, w.Code, w.Body)
-		}
-		if k.nazwa == "logowanie złym kodem" && strings.Contains(w.Body.String(), "wymaga_kodu") {
-			t.Fatalf("zły kod opisany jako brak kodu: %s", w.Body)
-		}
-	}
-}
 
 func TestUrzadzenia(t *testing.T) {
 	sr := noweSrodowisko(t, true)

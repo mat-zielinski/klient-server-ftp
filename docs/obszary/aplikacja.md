@@ -24,7 +24,7 @@ systemu w plikach `*_windows.go` / `*_linux.go`; inne systemy kompilują się z 
       w tle raz pytamy `siec.AdresPubliczny` i restartujemy FTPS z polem `AdresPubliczny` (PASV za routerem).
    4. Co `OkresSprzataniaUdostepnien` (godzina) `Udostepnienia.Sprzataj()`.
    5. Fala 2 (`uslugi_magazynu.go`): `monitor.Nowy(monitor.ZLicznikami(...))` + `Uruchom(ctx)` przy starcie; liczniki
-      = otwarte połączenia HTTP/HTTPS (hak `http.Server.ConnState`: nowe +1, zamknięte / przejęte −1) i
+      = otwarte połączenia HTTP/HTTPS (hak `http.Server.ConnState`: nowe +1, zamknięte / przejęte −1) + sterujące FTPS (`ftp.Polaczenia()`) i
       `len(Rejestr.Aktywne(""))`. Na każdy magazyn: `indeks.Nowy(m)` + `Uruchom` (kontekst potomny serwera),
       `miniatury.Nowe(m, "")`, `sumy.Nowe(m)`; przy podmianie magazynu wszystkie trzy odtwarzane, indeksowanie
       starego anulowane. `Miniatury.Sprzataj()` raz w tle przy starcie.
@@ -64,10 +64,8 @@ Skrypty: `skrypty/buduj.bat`, `skrypty/buduj.sh`, `skrypty/instaluj-linux.sh`, `
   `-trimpath -ldflags "-s -w"`: `wyjscie\skrytka.exe` (`-H windowsgui`, bez konsoli), `wyjscie\skrytka_konsola.exe`
   (ten sam program z konsolą, do diagnozy; `--konsola` działa w obu), `wyjscie\skrytka-linux-amd64`, `wyjscie\skrytka-linux-arm64` (Raspberry Pi 64-bit).
 - `START.bat`: buduje, gdy brak `wyjscie\skrytka.exe`, i uruchamia go (dane w `wyjscie\dane`, logi w `wyjscie\logi`).
-- `skrypty/instaluj-linux.sh [binarka]` (root): kopiuje binarkę (domyślnie `./skrytka` obok skryptu, jak w paczce
-  tar.gz; gdy brak, `wyjscie/skrytka-linux-<arch>`) do `/opt/skrytka/skrytka`, zakłada użytkownika
-  systemowego `skrytka`, oddaje mu `/opt/skrytka`, woła `--usluga instaluj` i startuje usługę. Komunikaty:
-  `journalctl -u skrytka`.
+- `skrypty/instaluj-linux.sh` i `odinstaluj-linux.sh` (root): program w `/opt/skrytka`, dane i logi w `/var/lib/skrytka`
+  (nakładka systemd z `SKRYTKA_KATALOG`), użytkownik `skrytka`, ikona i skrót w menu. Opis: [linux.md](linux.md).
 
 ## Stałe (`wewn/konfiguracja/aplikacja.go`)
 
@@ -87,8 +85,7 @@ zdjęcie filtra hosta przekierowania i odłączenie `naKoniec` dają czerwone te
 
 ## Czego nie zrobiono
 
-1. Ikona w zasobniku (Windows): wymaga biblioteki spoza `go.mod` (propozycja: `fyne.io/systray`, czyste Go na Windows,
-   bez cgo; alternatywa `github.com/getlantern/systray`).
+1. Ikona w zasobniku jest (`fyne.io/systray`, opis: [zasobnik.md](zasobnik.md)); brak powiadomień systemowych przy starcie pobrania.
 2. Usługa Windows i systemd nie były uruchamiane naprawdę (wymagają admina / roota); testowana tylko treść jednostki
    i argumenty. Kompilacja Linux sprawdzona (`GOOS=linux go vet`), działanie na Linuksie nie.
 3. FTPS w teście tylko startuje i się zamyka, bez połączenia klienta.

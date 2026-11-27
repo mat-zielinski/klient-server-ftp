@@ -18,6 +18,7 @@
   import { pasek } from '../stan/pasek.svelte'
   import { uklad } from '../stan/uklad.svelte'
   import Ikona from './wspolne/Ikona.svelte'
+  import Logo from './wspolne/Logo.svelte'
 
   interface Props {
     nazwa: string
@@ -93,7 +94,7 @@
   aria-label="Menu główne"
 >
   <div class="marka" class:zwiniety>
-    <span class="logo"><Ikona nazwa="dysk" /></span>
+    <span class="logo"><Logo /></span>
     {#if !zwiniety}
       <span class="nazwy">
         <span class="nazwa skroc">{nazwa}</span>
@@ -202,9 +203,11 @@
     flex: none;
     width: var(--wysokosc-przycisk);
     height: var(--wysokosc-przycisk);
-    border-radius: var(--promien-przycisk);
-    background: var(--kolor-niebieski-tlo);
-    color: var(--kolor-na-ciemnym);
+  }
+  .logo :global(svg) {
+    display: block;
+    width: 100%;
+    height: 100%;
   }
   .nazwy {
     display: flex;

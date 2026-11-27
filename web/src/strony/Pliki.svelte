@@ -312,6 +312,7 @@
         odswiez={() => void wczytaj()}
         pobierzZip={() => akcje?.zip(zazn.wybrane)}
         usunZaznaczone={() => akcje?.usun(zazn.wybrane)}
+        odznacz={() => zazn.odznacz()}
       />
 
       <Karta bezMarginesu>

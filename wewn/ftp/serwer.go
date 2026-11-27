@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"sync"
+	"sync/atomic"
 
 	ftpserver "github.com/fclairamb/ftpserverlib"
 
@@ -82,6 +83,8 @@ type uslugi struct {
 	dziennik       zapisDziennika
 	rozpocznij     func(s transfery.Stan) uchwytTransferu
 	czyWolno       func(u rdzen.Uzytkownik, op rdzen.Operacja, udzial string, tylkoOdczyt bool) error
+	// licznik otwartych połączeń sterujących (produkcyjnie globalny dla procesu; nil = własny sterownika)
+	licznik *atomic.Int64
 }
 
 // Uruchom serwer FTPS do anulowania ctx. Logowanie tylko kont z flagą FTPS; korzeń = lista udziałów
@@ -93,7 +96,7 @@ func Uruchom(ctx context.Context, z Zaleznosci) error {
 	u := uslugi{
 		kfg: z.Konfiguracja, adresPubliczny: z.AdresPubliczny,
 		tls: z.TLS, magazyn: z.Magazyn, konta: z.Konta, dziennik: z.Dziennik,
-		czyWolno: rdzen.CzyWolno, rozpocznij: rozpoczynanie(z.Transfery),
+		czyWolno: rdzen.CzyWolno, rozpocznij: rozpoczynanie(z.Transfery), licznik: &polaczenia,
 	}
 	if u.tls == nil {
 		return errBrakTLS
@@ -163,6 +166,9 @@ type sterownik struct {
 }
 
 func nowySterownik(u uslugi, ln net.Listener) *sterownik {
+	if u.licznik == nil {
+		u.licznik = new(atomic.Int64)
+	}
 	return &sterownik{
 		u: u, ln: ln,
 		naIP:  map[string]int{},
@@ -214,6 +220,12 @@ func (s *sterownik) GetTLSConfig() (*tls.Config, error) {
 	return c, nil
 }
 
+// polaczenia: otwarte połączenia sterujące FTPS w całym procesie (wszystkie serwery i pokolenia po restarcie).
+var polaczenia atomic.Int64
+
+// Polaczenia: liczba otwartych połączeń sterujących FTPS w procesie (licznik dla monitora).
+func Polaczenia() int { return int(polaczenia.Load()) }
+
 // ClientConnected liczy połączenia z adresu; ponad limit = odmowa (ClientDisconnected i tak zdejmie licznik).
 func (s *sterownik) ClientConnected(cc ftpserver.ClientContext) (string, error) {
 	ip := adresIP(cc.RemoteAddr())
@@ -222,6 +234,7 @@ func (s *sterownik) ClientConnected(cc ftpserver.ClientContext) (string, error) 
 	s.naIP[ip]++
 	s.ipKl[cc.ID()] = ip
 	s.klien[cc.ID()] = cc
+	s.u.licznik.Add(1)
 	if s.naIP[ip] > konfiguracja.FTPMaksPolaczenNaIP {
 		return errZaDuzoPolaczen.Error(), errZaDuzoPolaczen
 	}
@@ -238,6 +251,7 @@ func (s *sterownik) ClientDisconnected(cc ftpserver.ClientContext) {
 	}
 	delete(s.ipKl, cc.ID())
 	delete(s.klien, cc.ID())
+	s.u.licznik.Add(-1)
 	s.naIP[ip]--
 	if s.naIP[ip] <= 0 {
 		delete(s.naIP, ip)

@@ -1,5 +1,8 @@
 <script lang="ts">
   // Pole tekstowe (QLineEdit stacji): etykieta nad polem, opcjonalna ikona, podpowiedź lub błąd pod polem.
+  // Opcje dodatkowe (ekrany wejścia): onblur/onfocus (walidacja „na dotknięciu”), inputmode, maxlength,
+  // duze (wyższe pole), sufiks (snippet w ramce po prawej).
+  import type { Snippet } from 'svelte'
   import type { NazwaIkony } from '../../ikony/ikony'
   import Ikona from './Ikona.svelte'
 
@@ -22,6 +25,14 @@
     autofocus?: boolean
     oninput?: (e: Event) => void
     onkeydown?: (e: KeyboardEvent) => void
+    onblur?: (e: FocusEvent) => void
+    onfocus?: (e: FocusEvent) => void
+    inputmode?: 'text' | 'numeric' | 'decimal' | 'email' | 'url' | 'search' | 'tel' | 'none'
+    maxlength?: number
+    /** Wyższe pole (ekrany wejścia). */
+    duze?: boolean
+    /** Treść w ramce po prawej stronie pola (np. znaczek zgodności). */
+    sufiks?: Snippet
   }
 
   let {
@@ -42,6 +53,12 @@
     autofocus = false,
     oninput,
     onkeydown,
+    onblur,
+    onfocus,
+    inputmode,
+    maxlength,
+    duze = false,
+    sufiks,
   }: Props = $props()
 
   const id = $props.id()
@@ -53,7 +70,7 @@
 
 <label class="pole" class:z-bledem={!!blad} for={id}>
   <span class="etykieta-pola" class:tylko-czytnik={ukryjEtykiete}>{etykieta}</span>
-  <span class="ramka" class:wylaczone>
+  <span class="ramka" class:wylaczone class:duze>
     {#if ikona}<span class="ikona"><Ikona nazwa={ikona} rozmiar="s" /></span>{/if}
     <input
       {id}
@@ -65,17 +82,23 @@
       class:mono
       {min}
       {max}
+      {maxlength}
+      {inputmode}
       {autocomplete}
       aria-invalid={blad ? 'true' : undefined}
+      aria-describedby={blad || opis ? `${id}-opis` : undefined}
       {oninput}
       {onkeydown}
+      {onblur}
+      {onfocus}
       use:ustawFokus
     />
+    {#if sufiks}<span class="sufiks">{@render sufiks()}</span>{/if}
   </span>
   {#if blad}
-    <span class="blad">{blad}</span>
+    <span class="blad" id="{id}-opis">{blad}</span>
   {:else if opis}
-    <span class="opis">{opis}</span>
+    <span class="opis" id="{id}-opis">{opis}</span>
   {/if}
 </label>
 
@@ -100,10 +123,16 @@
     background: var(--kolor-karta);
     border: var(--ramka);
     border-radius: var(--promien-przycisk);
-    transition: border-color var(--czas-szybki);
+    transition: border-color var(--czas-szybki), box-shadow var(--czas-szybki);
+  }
+  .ramka.duze {
+    height: var(--wysokosc-pole-duze);
   }
   .ramka:focus-within {
     border-color: var(--kolor-niebieski);
+  }
+  .ramka.duze:focus-within {
+    box-shadow: 0 0 0 var(--odstep-xs) var(--kolor-fokus-pola);
   }
   .z-bledem .ramka {
     border-color: var(--kolor-czerwony);
@@ -111,7 +140,8 @@
   .wylaczone {
     opacity: var(--uklad-suwak-przygaszenie);
   }
-  .ikona {
+  .ikona,
+  .sufiks {
     display: inline-flex;
     color: var(--kolor-opis);
   }
@@ -124,6 +154,9 @@
     outline: 0;
     background: transparent;
     font-size: var(--czcionka-maly);
+  }
+  .duze input {
+    font-size: var(--czcionka-tekst);
   }
   input::placeholder {
     color: var(--kolor-opis);

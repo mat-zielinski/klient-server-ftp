@@ -47,6 +47,8 @@ zaznaczona pozycja tłem `aktywny` i akcentem), nagłówek strony z tytułem i k
 | `…/Okno.svelte` | dialog modalny `{tytul, otwarte (bindable), children, stopka? (snippet)}` |
 | `…/MenuKontekstowe.svelte` | `{x, y, pozycje: {etykieta, ikona?, opis?, onclick, wylaczona?, podmenu?: pozycje[], separator?}[], zamknij}` |
 | `…/Pole.svelte`, `…/Przelacznik.svelte`, `…/Wybor.svelte` | pola formularzy `{etykieta, value (bindable), …}` |
+| `…/Pole.svelte` (dodatki) | opcjonalnie `opis` (podpis pod polem), `podpowiedz` (placeholder), `onblur`, `onfocus`, `inputmode`, `maxlength`, `duze`, `kod`, `sufiks`, `aria-describedby` |
+| `…/PoleHasla.svelte` | hasło z okiem pokaż/ukryj, ostrzeżeniem Caps Lock, opcjonalnym paskiem siły i „Wygeneruj” (16 znaków, Kopiuj), znaczek `zgodne`; funkcje `ocenHaslo`, `generujHaslo` w `<script module>` |
 | `…/Tabela.svelte` | `{kolumny: {klucz, etykieta, szerokosc?, wyrownanie?, ukryjPonizej?}[], wiersze, wiersz (snippet), naSortuj?}` |
 | `…/PasekPostepu.svelte` | `{wartosc 0..1 \| null (nieokreślony), stan?}` |
 | `…/Pusto.svelte` | stan pusty `{ikona, tytul, opis?}` |

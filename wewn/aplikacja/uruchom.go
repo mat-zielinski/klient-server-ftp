@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 
 	"skrytka/wewn/konfiguracja"
@@ -54,7 +55,11 @@ func uruchomZwykle(p polecenie) int {
 	defer zwolnij()
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	if err := uruchomSerwer(ctx, Opcje{Konsola: p.Konsola}); err != nil {
+	uruchom := uruchomSerwer
+	if czyPokazacZasobnik(p, runtime.GOOS, os.Getenv) {
+		uruchom = uruchomZZasobnikiem
+	}
+	if err := uruchom(ctx, Opcje{Konsola: p.Konsola}); err != nil {
 		pokazKomunikat("Serwer nie działa: " + err.Error())
 		return konfiguracja.KodBlad
 	}

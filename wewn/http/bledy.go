@@ -10,6 +10,7 @@ import (
 	"skrytka/wewn/uslugi/dziennik"
 	"skrytka/wewn/uslugi/konta"
 	"skrytka/wewn/uslugi/miniatury"
+	"skrytka/wewn/uslugi/transfery"
 	"skrytka/wewn/uslugi/udostepnienia"
 )
 
@@ -56,14 +57,10 @@ var mapowanieBledow = []struct {
 	{rdzen.ErrWygaslo, nethttp.StatusGone, "Link wygasł albo wyczerpano limit pobrań."},
 	{udostepnienia.ErrZlyLink, nethttp.StatusBadRequest, "Niepoprawne dane linku."},
 	{magazyn.ErrZlePrzesuniecie, nethttp.StatusConflict, "Nieprawidłowe przesunięcie kawałka."},
+	{transfery.ErrPrzerwany, nethttp.StatusConflict, "Transfer przerwany przez administratora."},
 	{konta.ErrSlabeHaslo, nethttp.StatusBadRequest, "Hasło jest za krótkie."},
 	{konta.ErrZbytDlugieHaslo, nethttp.StatusBadRequest, "Hasło jest za długie albo ma niedozwolone znaki."},
 	{konta.ErrOstatniAdmin, nethttp.StatusConflict, "Nie można odebrać uprawnień ani usunąć ostatniego aktywnego administratora."},
-	{konta.ErrWymaganyKod, nethttp.StatusUnauthorized, "Podaj kod z aplikacji uwierzytelniającej."},
-	{konta.ErrZlyKod, nethttp.StatusBadRequest, "Nieprawidłowy albo już użyty kod."},
-	{konta.Err2FAJuzWlaczone, nethttp.StatusConflict, "Weryfikacja dwuetapowa jest już włączona."},
-	{konta.ErrBrakOczekujacego2FA, nethttp.StatusConflict, "Najpierw rozpocznij włączanie weryfikacji dwuetapowej."},
-	{konta.Err2FANieWlaczone, nethttp.StatusConflict, "Weryfikacja dwuetapowa nie jest włączona."},
 	{miniatury.ErrZlyRozmiar, nethttp.StatusBadRequest, "Nieznany rozmiar miniatury."},
 	{miniatury.ErrNieObraz, nethttp.StatusNotFound, "Brak miniatury dla tego pliku."},
 	{miniatury.ErrNieObslugiwany, nethttp.StatusNotFound, "Brak miniatury dla tego pliku."},
@@ -106,10 +103,6 @@ func (s *serwer) blad(w nethttp.ResponseWriter, r *nethttp.Request, err error) {
 
 // bladLogowania: złe dane logowania (konto albo hasło linku) = 401 zamiast 400.
 func (s *serwer) bladLogowania(w nethttp.ResponseWriter, r *nethttp.Request, err error) {
-	if errors.Is(err, konta.ErrZlyKod) {
-		piszBlad(w, nethttp.StatusUnauthorized, "Nieprawidłowy kod z aplikacji uwierzytelniającej.")
-		return
-	}
 	if errors.Is(err, rdzen.ErrZleDane) {
 		piszBlad(w, nethttp.StatusUnauthorized, "Błędny login lub hasło.")
 		return

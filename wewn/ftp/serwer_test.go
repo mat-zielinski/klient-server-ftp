@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	ftpserver "github.com/fclairamb/ftpserverlib"
@@ -182,5 +183,44 @@ func TestLogowanie(t *testing.T) {
 		if tt.ok && cc.sciezka != "/" {
 			t.Errorf("%s: ścieżka startowa %q", tt.nazwa, cc.sciezka)
 		}
+	}
+}
+
+// Licznik połączeń dla monitora: wspólny dla wielu sterowników (serwer na każdym adresie), odrzucone
+// ponad limit liczą się do rozłączenia, podwójne rozłączenie nie zdejmuje drugi raz.
+func TestLicznikPolaczen(t *testing.T) {
+	s := noweSrodowisko(t)
+	var licznik atomic.Int64
+	s.u.licznik = &licznik
+	st1, st2 := nowySterownik(s.u, nil), nowySterownik(s.u, nil)
+	kroki := []struct {
+		nazwa string
+		krok  func()
+		oczek int64
+	}{
+		{"pierwszy serwer", func() { _, _ = st1.ClientConnected(kontekst(1, "10.0.0.1")) }, 1}, // celowo: liczy się licznik
+		{"drugi serwer", func() { _, _ = st2.ClientConnected(kontekst(1, "10.0.0.2")) }, 2},    // celowo: j.w.
+		{"rozłączenie", func() { st1.ClientDisconnected(kontekst(1, "10.0.0.1")) }, 1},
+		{"podwójne rozłączenie", func() { st1.ClientDisconnected(kontekst(1, "10.0.0.1")) }, 1},
+		{"nieznany klient", func() { st2.ClientDisconnected(kontekst(9, "10.0.0.9")) }, 1},
+		{"ostatnie", func() { st2.ClientDisconnected(kontekst(1, "10.0.0.2")) }, 0},
+	}
+	for _, k := range kroki {
+		k.krok()
+		if got := licznik.Load(); got != k.oczek {
+			t.Fatalf("%s: licznik %d, oczekiwano %d", k.nazwa, got, k.oczek)
+		}
+	}
+	if nowySterownik(uslugi{}, nil).u.licznik == nil {
+		t.Fatal("sterownik bez licznika")
+	}
+}
+
+func TestPolaczeniaGlobalne(t *testing.T) {
+	przed := Polaczenia()
+	polaczenia.Add(2)
+	defer polaczenia.Add(-2)
+	if Polaczenia() != przed+2 {
+		t.Fatalf("Polaczenia: %d, przed %d", Polaczenia(), przed)
 	}
 }

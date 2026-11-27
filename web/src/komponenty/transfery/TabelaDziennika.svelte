@@ -14,8 +14,9 @@
   import { DZIENNIK } from './stale'
   import { RODZAJE_WPISU, nazwaPliku, nazwaRodzaju, nazwaWyniku, stanProtokolu, stanWyniku } from './typy'
 
-  interface Props { od: string; doCzasu: string; admin: boolean }
-  let { od, doCzasu, admin }: Props = $props()
+  /** `odswiezenie`: licznik z rodzica; każda zmiana wymusza ponowne zapytanie przy tych samych granicach. */
+  interface Props { od: string; doCzasu: string; admin: boolean; odswiezenie?: number }
+  let { od, doCzasu, admin, odswiezenie = 0 }: Props = $props()
 
   let rodzaj = $state('')
   let kto = $state('')
@@ -54,6 +55,7 @@
 
   // Każda zmiana zakresu lub filtra: zapytanie po krótkiej zwłoce (pisanie w polu nie wysyła co znak).
   $effect(() => {
+    void odswiezenie // celowo: zależność efektu, wymusza ponowne zapytanie
     const parametry: Record<string, string | number> = { od, do: doCzasu, limit: DZIENNIK.limitWpisow }
     if (rodzaj) parametry.rodzaj = rodzaj
     if (admin && kto.trim()) parametry.kto = kto.trim()

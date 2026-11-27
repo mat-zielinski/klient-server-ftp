@@ -42,6 +42,17 @@ Instalacja krok po kroku: [INSTALACJA.txt](INSTALACJA.txt). W skrócie:
    (przekierowanie), FTPS 2121, porty pasywne FTPS 50000–50100.
 4. Osobom pobierającym przekaż instrukcję [docs/dla_klienta.md](docs/dla_klienta.md).
 
+### Linux (systemd)
+
+Paczka `skrytka-<wersja>-linux-amd64.tar.gz` albo `-linux-arm64` (Raspberry Pi 64-bit): rozpakuj i uruchom
+`sudo sh instaluj-linux.sh` (opcja `--tak` = bez pytań). Program trafia do `/opt/skrytka`, dane i logi do
+`/var/lib/skrytka` (zmienna `SKRYTKA_KATALOG` w nakładce `skrytka.service.d/katalog.conf`), usługa `skrytka` działa
+jako użytkownik systemowy `skrytka` i startuje z systemem. W menu pojawia się „Skrytka” (otwiera panel
+`https://127.0.0.1:8443`). Porty w ufw / firewalld skrypt otwiera tylko po potwierdzeniu. Ponowne uruchomienie =
+aktualizacja z zachowaniem danych. Komunikaty: `journalctl -u skrytka -f`. Usuwanie:
+`sudo sh /opt/skrytka/odinstaluj-linux.sh` (`--z-danymi` usuwa też dane i użytkownika). Szczegóły:
+[INSTALACJA.txt](INSTALACJA.txt) punkt 6 i [docs/obszary/linux.md](docs/obszary/linux.md).
+
 ## Budowanie
 
 Wymagania: Go 1.27.4 przenośne w `_go-portable\` (nie jest w repo, rozpakuj oficjalne Go dla Windows amd64 do tego

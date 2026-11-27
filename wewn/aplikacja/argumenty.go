@@ -12,10 +12,12 @@ type polecenie struct {
 	// Usluga: "" = serwer; inaczej instaluj | usun | start | stop.
 	Usluga  string
 	Konsola bool
+	// BezZasobnika: zwykły serwer bez ikony w zasobniku systemowym.
+	BezZasobnika bool
 }
 
 // errZleArgumenty: opis poprawnego użycia.
-var errZleArgumenty = errors.New("Użycie: skrytka.exe [--konsola] | --usluga instaluj|usun|start|stop")
+var errZleArgumenty = errors.New("Użycie: skrytka.exe [--konsola] [--bez-zasobnika] | --usluga instaluj|usun|start|stop")
 
 // czytajArgumenty zamienia argumenty na polecenie; nieznany argument = błąd z opisem użycia.
 func czytajArgumenty(argumenty []string) (polecenie, error) {
@@ -24,6 +26,8 @@ func czytajArgumenty(argumenty []string) (polecenie, error) {
 		switch argumenty[i] {
 		case konfiguracja.ArgumentKonsola:
 			p.Konsola = true
+		case konfiguracja.ArgumentBezZasobnika:
+			p.BezZasobnika = true
 		case konfiguracja.ArgumentUsluga:
 			if i+1 >= len(argumenty) || !znanePolecenieUslugi(argumenty[i+1]) || p.Usluga != "" {
 				return polecenie{}, errZleArgumenty
@@ -34,7 +38,7 @@ func czytajArgumenty(argumenty []string) (polecenie, error) {
 			return polecenie{}, fmt.Errorf("Nieznany argument %q. %w", argumenty[i], errZleArgumenty)
 		}
 	}
-	if p.Usluga != "" && p.Konsola {
+	if p.Usluga != "" && (p.Konsola || p.BezZasobnika) {
 		return polecenie{}, errZleArgumenty
 	}
 	return p, nil

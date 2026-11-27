@@ -9,9 +9,13 @@ dostępny (bez wpisu w historii).
 1. **Układ**: lewa kolumna udziałów (`ListaUdzialow`, pigułka „Odczyt” bez prawa zapisu); poniżej progu `waski`
    udział wybiera się listą w nagłówku. Okruszki ścieżki, przycisk „folder wyżej”. Szkielety ładowania
    (`wspolne/Szkielet`) zamiast pustego ekranu przy wczytywaniu udziałów, folderu i szukania.
-2. **Pasek narzędzi** (`PasekNarzedzi`): szukaj, sortowanie (foldery zawsze pierwsze, porządek naturalny nazw),
-   widok lista / kafelki (pamiętany w `localStorage`), tryb „Zaznacz” (pola wyboru), dla zaznaczonych Pobierz ZIP
-   i Usuń, odśwież, nowy folder, wgraj. Bez prawa zapisu przyciski wyszarzone z powodem w dymku.
+2. **Pasek narzędzi** (`PasekNarzedzi`): jeden rząd o stałej wysokości, który się nie zawija. Bez zaznaczenia:
+   szukaj, sortowanie (foldery zawsze pierwsze, porządek naturalny nazw), widok lista / kafelki (pamiętany
+   w `localStorage`), tryb „Zaznacz” (pola wyboru), odśwież, nowy folder, wgraj. Przy zaznaczeniu pasek zmienia się
+   w pasek zaznaczenia: licznik, Pobierz ZIP, Usuń, Odznacz. Przy braku miejsca (pasek sam mierzy, czy treść się
+   mieści) kolejno: szukajka się zwęża, przyciski zostają same z ikoną (dymek i etykieta dostępności), a sortowanie,
+   widok, Zaznacz, Odśwież i Nowy folder przechodzą do menu „…” (`MenuKontekstowe`). Bez prawa zapisu przyciski
+   i pozycje menu wyszarzone z powodem w dymku.
 3. **Szukanie**: GET `/api/indeks/szukaj?udzial&q&limit` (cały udział, wynik zawężany do bieżącego folderu),
    przy 404 / 503 zapasowo GET `/api/szukaj`; opóźnienie 200 ms; pasujące fragmenty nazw podświetlone
    (`Podswietlenie`), w liście dodatkowo ścieżka wpisu.
@@ -20,6 +24,10 @@ dostępny (bez wpisu w historii).
    mierzona z wyrenderowanych elementów (pierwszy pomiar z tokenu `--wysokosc-wiersz-tabeli`), liczba kolumn siatki
    z `grid-template-columns`. Działa z dowolnym przewijanym rodzicem; `przewinDo` przewija do wpisu spoza
    wyrenderowanych (strzałki). Długości w CSS jako `calc(var(--odstep-ramka) * n)` (bez „px” poza tokenami).
+   Kolumny listy zależą od szerokości samej listy: nazwa zostaje zawsze (wielokropek i dymek ze ścieżką), kolumna
+   Zmieniono wymaga miejsca na nazwę co najmniej `--kolumna-xl`, a kolumna Rozmiar co najmniej `--kolumna-l`.
+   Ukryte dane schodzą do drugiego wiersza pod nazwą (np. „2 KB · 3 dni temu”). Kolumny znikają naraz
+   z `<colgroup>`, nagłówka i wierszy, więc nagłówek i wiersze mają jedną siatkę.
 5. **Miniatury** (`Miniatura`): GET `/api/miniatura?udzial&sciezka&rozmiar=s|m` (kafelki `s`, galeria `m`),
    wczytywane dopiero w polu widzenia (IntersectionObserver), do czasu wczytania i przy błędzie ikona rodzaju.
 6. **Zaznaczanie i klawiatura** (`zaznaczenie.svelte.ts`, `klawiatura.ts`): klik, Ctrl+klik, Shift+klik; strzałki

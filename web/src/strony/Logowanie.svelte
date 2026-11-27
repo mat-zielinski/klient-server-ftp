@@ -1,12 +1,15 @@
 <script lang="ts">
-  // Logowanie (POST /api/logowanie): login, hasło, Enter wysyła. Złe dane = komunikat błędu, 429 = blokada konta
-  // po złych hasłach (komunikat z serwera, np. ile czekać). Po sukcesie odświeża sesję (App pokaże aplikację).
-  import { api, BladApi, trescBledu } from '../api/klient'
+  // Logowanie (POST /api/logowanie): login, hasło (oko + Caps Lock), Enter wysyła. Złe dane = komunikat błędu,
+  // 429 = blokada konta po złych hasłach (komunikat z serwera, np. ile czekać). Po sukcesie odświeża sesję
+  // (App pokaże aplikację).
+  import { tick } from 'svelte'
+  import { api, BladApi } from '../api/klient'
   import type { Uzytkownik } from '../api/typy'
   import EkranSrodkowy from '../komponenty/admin/EkranSrodkowy.svelte'
   import Komunikat from '../komponenty/admin/Komunikat.svelte'
   import { KOD_BLOKADY } from '../komponenty/admin/stale'
   import Pole from '../komponenty/wspolne/Pole.svelte'
+  import PoleHasla from '../komponenty/wspolne/PoleHasla.svelte'
   import Przycisk from '../komponenty/wspolne/Przycisk.svelte'
   import { sesja } from '../stan/sesja.svelte'
 
@@ -15,10 +18,11 @@
   let trwa = $state(false)
   let blad = $state('')
   let zablokowane = $state(false)
+  let formularz = $state<HTMLFormElement>()
 
-  const mozna = $derived(login.trim() !== '' && haslo !== '' && !trwa)
+  const mozna = $derived(!trwa && login.trim() !== '' && haslo !== '')
 
-  async function zaloguj(e?: Event) {
+  async function wyslij(e?: Event) {
     e?.preventDefault()
     if (!mozna) return
     trwa = true
@@ -29,26 +33,39 @@
       haslo = ''
       await sesja.odswiez()
     } catch (b) {
-      zablokowane = b instanceof BladApi && b.kod === KOD_BLOKADY
-      blad = trescBledu(b)
-      haslo = ''
+      await obsluzBlad(b)
     } finally {
       trwa = false
     }
   }
+
+  async function obsluzBlad(b: unknown) {
+    const bl = b instanceof BladApi ? b : new BladApi(-1, 'Nie udało się zalogować.')
+    zablokowane = bl.kod === KOD_BLOKADY
+    blad = bl.komunikat
+    haslo = ''
+    await tick()
+    formularz?.querySelector<HTMLInputElement>('input[type="password"]')?.focus()
+  }
 </script>
 
-<EkranSrodkowy podtytul="Zaloguj się, aby zobaczyć udostępnione pliki">
-  <form class="formularz" onsubmit={zaloguj} novalidate>
-    <h2>Logowanie</h2>
-    <Pole etykieta="Login" bind:value={login} ikona="uzytkownik" autocomplete="username" autofocus wymagane />
-    <Pole etykieta="Hasło" typ="password" bind:value={haslo} ikona="klodka" autocomplete="current-password" wymagane />
+<EkranSrodkowy>
+  <form class="formularz" bind:this={formularz} onsubmit={wyslij} novalidate>
+    <header>
+      <h2>Zaloguj się</h2>
+      <p class="opis">Witaj ponownie. Podaj login i hasło do Skrytki.</p>
+    </header>
+    <Pole etykieta="Login" bind:value={login} ikona="uzytkownik" autocomplete="username" autofocus wymagane duze
+      podpowiedz="Twój login" />
+    <PoleHasla etykieta="Hasło" bind:value={haslo} autocomplete="current-password" podpowiedz="Hasło" />
+
     {#if blad}
       <Komunikat rodzaj={zablokowane ? 'ostrz' : 'blad'}>
-        {#if zablokowane}<strong>Konto tymczasowo zablokowane.</strong>{/if}
+        {#if zablokowane}<strong class="blokada">Konto tymczasowo zablokowane.</strong>{/if}
         {blad}
       </Komunikat>
     {/if}
+
     <div class="akcje">
       <Przycisk rodzaj="glowny" typ="submit" ikona="zaloguj" rozmiar="duzy" wylaczony={!mozna}>
         {trwa ? 'Logowanie…' : 'Zaloguj'}
@@ -61,13 +78,28 @@
   .formularz {
     display: flex;
     flex-direction: column;
-    gap: var(--odstep-xl);
+    gap: var(--odstep-sekcja);
+  }
+  header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--odstep-xs);
+    margin-bottom: var(--odstep-xs);
+  }
+  h2 {
+    margin: 0;
+    font-size: var(--czcionka-tytul-strony);
+  }
+  header .opis {
+    margin: 0;
   }
   .akcje {
     display: flex;
     flex-direction: column;
+    gap: var(--odstep-l);
+    margin-top: var(--odstep-xs);
   }
-  strong {
+  .blokada {
     margin-right: var(--odstep-xs);
   }
 </style>

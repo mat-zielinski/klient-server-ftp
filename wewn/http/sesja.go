@@ -9,7 +9,6 @@ import (
 	"skrytka/wewn/konfiguracja"
 	"skrytka/wewn/rdzen"
 	"skrytka/wewn/uslugi/dziennik"
-	"skrytka/wewn/uslugi/konta"
 )
 
 // widokUzytkownika: użytkownik bez hasha hasła (nigdy nie wysyłamy rdzen.Uzytkownik wprost).
@@ -46,7 +45,6 @@ func (s *serwer) stan(w nethttp.ResponseWriter, r *nethttp.Request) {
 		Zalogowany bool              `json:"zalogowany"`
 		Uzytkownik *widokUzytkownika `json:"uzytkownik"`
 		Motyw      string            `json:"motyw"`
-		Ma2FA      bool              `json:"ma_2fa"`
 	}{
 		Wersja: wersja(), Nazwa: konfiguracja.NazwaAplikacji,
 		Kreator: s.konta.CzyPusto(), Motyw: s.konfiguracja().Motyw,
@@ -56,7 +54,7 @@ func (s *serwer) stan(w nethttp.ResponseWriter, r *nethttp.Request) {
 	}
 	if u, ok := uzytkownikZ(r); ok {
 		v := widok(u)
-		odp.Zalogowany, odp.Uzytkownik, odp.Ma2FA = true, &v, s.konta.Ma2FA(u.Login)
+		odp.Zalogowany, odp.Uzytkownik = true, &v
 	}
 	piszJSON(w, nethttp.StatusOK, odp)
 }
@@ -154,18 +152,12 @@ func (s *serwer) logowanie(w nethttp.ResponseWriter, r *nethttp.Request) {
 	var d struct {
 		Login string `json:"login"`
 		Haslo string `json:"haslo"`
-		Kod   string `json:"kod"`
 	}
 	if err := czytajJSON(w, r, &d); err != nil {
 		s.blad(w, r, err)
 		return
 	}
-	u, err := s.konta.ZalogujZKodem(d.Login, d.Haslo, d.Kod, adresIP(r))
-	if errors.Is(err, konta.ErrWymaganyKod) {
-		// Dobre hasło, brak kodu: to nie jest nieudana próba, tylko prośba o drugi składnik.
-		piszJSON(w, nethttp.StatusUnauthorized, map[string]any{"blad": "Podaj kod z aplikacji uwierzytelniającej.", "wymaga_kodu": true})
-		return
-	}
+	u, err := s.konta.Zaloguj(d.Login, d.Haslo, adresIP(r))
 	if err != nil {
 		wpis := s.wpisDziennika(r, dziennik.RodzajLogowanieBlad,
 			przytnij(d.Login, konfiguracja.MaksDlugoscKtoWDzienniku))
@@ -183,9 +175,6 @@ func (s *serwer) logowanie(w nethttp.ResponseWriter, r *nethttp.Request) {
 func opisBleduLogowania(err error) string {
 	if errors.Is(err, rdzen.ErrKontoZablokowane) {
 		return "Konto albo adres chwilowo zablokowane."
-	}
-	if errors.Is(err, konta.ErrZlyKod) {
-		return "Nieprawidłowy kod drugiego składnika."
 	}
 	return "Błędny login lub hasło."
 }

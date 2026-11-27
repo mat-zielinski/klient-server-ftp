@@ -3,7 +3,7 @@
 package konfiguracja
 
 // Wersja aplikacji: podbijana przy każdej zmianie, wpis w zmiany.md.
-const Wersja = "0.1"
+const Wersja = "0.2"
 
 // NazwaAplikacji pokazywana w tytule, stopce i dzienniku.
 const NazwaAplikacji = "Skrytka"

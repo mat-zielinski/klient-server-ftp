@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Skrytka
+GenericName=Serwer plików
+GenericName[pl]=Serwer plików
+Comment=Panel serwera plików Skrytka w przeglądarce (usługa systemd)
+Comment[pl]=Panel serwera plików Skrytka w przeglądarce (usługa systemd)
+Exec=xdg-open https://127.0.0.1:8443
+Icon=skrytka
+Terminal=false
+Categories=Network;FileTransfer;
+Keywords=ftp;ftps;pliki;serwer;
+StartupNotify=false

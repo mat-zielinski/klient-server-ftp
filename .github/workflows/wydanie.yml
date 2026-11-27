@@ -110,8 +110,11 @@ jobs:
               echo "::error::Brak skrypty/instaluj-linux.sh: paczka Linux byłaby niepełna."
               exit 1
             fi
-            cp skrypty/instaluj-linux.sh "$katalog/"
-            chmod +x "$katalog/instaluj-linux.sh"
+            cp skrypty/instaluj-linux.sh skrypty/odinstaluj-linux.sh "$katalog/"
+            chmod +x "$katalog/instaluj-linux.sh" "$katalog/odinstaluj-linux.sh"
+            # Ikona i skrót w menu: instaluj-linux.sh szuka ich w assets/linux obok siebie.
+            mkdir -p "$katalog/assets/linux"
+            cp assets/linux/skrytka.png assets/linux/skrytka.desktop "$katalog/assets/linux/"
             tar -czf "wynik/${nazwa}.tar.gz" -C paczka "$nazwa"
           fi
           ls -l wynik

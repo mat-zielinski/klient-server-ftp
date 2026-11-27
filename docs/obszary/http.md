@@ -16,12 +16,15 @@ Zasady:
 4. Pobieranie: `http.ServeContent` (Range, ETag, If-None-Match, If-Modified-Since); transfer rejestrowany dopiero przy
    odpowiedzi 200/206 na GET (304/416/HEAD nie są pobraniem); bajty przez `Transfer.PiszDo`; wpis dziennika pobrania
    robi WYŁĄCZNIE callback `naKoniec` rejestru w aplikacji (jedno źródło dla HTTP i FTPS); HTTP tylko kończy transfer
-   z wynikiem ok/przerwane/blad. Wgranie zatwierdzone HTTP zapisuje sam (nie idzie przez rejestr). `Content-Disposition` z nazwą ASCII i `filename*=UTF-8''…` (RFC 5987).
+   z wynikiem ok/przerwane/blad. Wgranie: jeden transfer na cały plik (kawałki przez `Transfer.CzytajZ`), wpis dziennika „wgranie” też WYŁĄCZNIE z `naKoniec` (HTTP nie pisze własnego). `Content-Disposition` z nazwą ASCII i `filename*=UTF-8''…` (RFC 5987).
 5. Pliki użytkownika: bez `podglad` zawsze `application/octet-stream`; przy podglądzie JS jako `text/plain`, HTML jako
    `text/plain` + piaskownica CSP, SVG/XML z piaskownicą CSP (ochrona przed XSS z wgranych plików).
 6. Linki publiczne: ścieżka podrzędna po `OczyscSciezke` i sprawdzeniu, że leży w ścieżce linku; autor linku musi nadal
    mieć prawo pobierania; ścieżki w odpowiedzi względne do linku; `ZaliczPobranie` przed wysłaniem (wznowienie Range
-   od środka nie liczy się drugi raz); folder = ZIP.
+   od środka nie liczy się drugi raz); folder = ZIP (także `/api/publiczny/<id>/zip`, podfolder przez `sciezka`). Link z
+   hasłem: po poprawnym haśle ciasteczko `skrytka_link` (HMAC-SHA256 z id i czasu wygaśnięcia, klucz losowy w pamięci,
+   30 min, `Path=/api/publiczny/<id>`); `pobierz`/`zip`/info przyjmują hasło ALBO ważne ciasteczko; brak hasła nie liczy
+   się jako zła próba.
 7. SSE `/api/transfery/strumien`: subskrypcja przed nagłówkami, `no-cache`, `X-Accel-Buffering: no`, zdarzenie
    `suma` co 1 s, `: ping` co 15 s; admin wszystkie transfery, inni własne.
 8. SPA: nieznana ścieżka = `index.html` (`no-cache`), pliki z hashem w nazwie (`nazwa-HASH.js`) cache rok `immutable`,
@@ -37,17 +40,19 @@ Zasady:
 | `sesja.go` | `/api/stan`, `/api/zdrowie`, `/api/kreator` (tylko gdy `CzyPusto`, pod blokadą), logowanie, wylogowanie |
 | `pliki.go` | udziały, lista, szukaj, folder, zmień (pełne ścieżki), usuń do kosza, bramka `dostepDoUdzialu` |
 | `pobieranie.go` | pobierz, ZIP (GET z powtarzanym `sciezka`, POST), `pisarzTransferu`, Content-Disposition |
-| `wgrywanie.go` | wgrywanie w kawałkach, wznowienie (`RozmiarKawalkow`), foldery nadrzędne |
+| `wgrywanie.go` | wgrywanie w kawałkach, wznowienie (`RozmiarKawalkow`), foldery nadrzędne, nagłówek `X-Rozmiar-Calkowity` |
+| `wgrania.go` | aktywne wgrania: jeden transfer na plik, sprzątanie porzuconych (60 s; przy żądaniu i tykaczem co 10 s, gorutyna tylko gdy są aktywne) |
+| `ciasteczko_linku.go` | klucz HMAC, ciasteczko linku publicznego (wydanie, sprawdzenie), `otworzLink` (hasło albo ciasteczko) |
 | `protokoly.go` | menu „Pobierz przez…” (host z nagłówka `Host`, FTPS z konfiguracji i flagi konta, odcisk) |
 | `transfery.go` | lista, SSE, przerwanie (admin) |
 | `dziennik.go` | wpisy (nie-admin: wymuszone `Kto`=login i `Rodzaj`=pobranie), statystyki (admin), eksport CSV |
-| `udostepnienia.go` | linki: lista, tworzenie, usuwanie (nie-admin tylko własne), strona `/s/<id>`, API publiczne |
+| `udostepnienia.go` | linki: lista, tworzenie, usuwanie (nie-admin tylko własne), strona `/s/<id>`, API publiczne (info, pobierz, zip) |
 | `admin.go` | konta, ustawienia (walidacja, „Wymaga restartu serwera”), sieć (adres publiczny pamiętany 10 min), zapora, pulpit |
 | `statyczne.go` | pliki interfejsu SPA (`sw.js` no-cache, `.webmanifest` = `application/manifest+json`) |
 | `dodatki.go` | interfejsy usług fali 2 (monitor, indeks, miniatury, sumy), nil = 503, `odswiezIndeks` |
 | `monitor.go` | trasy fali 2, `/api/monitor`, SSE `/api/monitor/strumien` (`event: probka`) |
 | `indeks.go` | `/api/indeks/szukaj` (gotowy indeks albo magazyn), `/api/indeks/statystyki`, `/api/miniatura` (ServeFile, bez transferu), `/api/suma` |
-| `konto.go` | `/api/konta/urzadzenia` (bieżąca przez `konta.IDSesji`), 2FA start/wlacz/wylacz |
+| `konto.go` | `/api/konta/urzadzenia` (bieżąca przez `konta.IDSesji`) |
 
 Stałe: `wewn/konfiguracja/http.go` (ciasteczko, CSRF, CSP, limity JSON/kawałka/szukania/dziennika, okresy SSE, cache,
 wzór nazwy z hashem, rozszerzenia gzip, prefiksy adresów, kroki statystyk).
@@ -65,18 +70,33 @@ mapowanie błędów, panic, limit treści JSON, logowanie (IP bez X-Forwarded-Fo
 Testy mutacyjne (zdjęcie blokady = test czerwony): CSRF, bramka w `dostepDoUdzialu`, filtr dziennika, autor linku,
 kreator, typ JS, usuwanie cudzego linku.
 
-Fala 2: logowanie przez `ZalogujZKodem` (brak kodu = 401 `wymaga_kodu`, zły kod = 401), sesje przez
-`UtworzZOpisem(login, IP, User-Agent)`; `/api/stan` z `WersjaBudowy` i `ma_2fa`; `/api/dziennik/mapa` liczona z
+Fala 2: logowanie przez `Konta.Zaloguj` (login i hasło), sesje przez
+`UtworzZOpisem(login, IP, User-Agent)`; `/api/stan` z `WersjaBudowy`; `/api/dziennik/mapa` liczona z
 `Czytaj` (pobrania, nie-admin własne, czas lokalny, pon=0); po każdej zmianie plików `Indeks.Odswiez(udzial)`;
-`/api/pulpit` z `monitor.ZajetoscDysku` dla folderów z konfiguracji. Testy fali 2: 2FA (pełny przebieg z TOTP),
+`/api/pulpit` z `monitor.ZajetoscDysku` dla folderów z konfiguracji. Testy fali 2:
 urządzenia, monitor (503, 403, SSE), indeks (magazyn, prawdziwy indeks, atrapa), odświeżanie indeksu, miniatury
 (PNG, 404/400/403, brak transferu), sumy, mapa, zajętość dysku, wersja budowy, sw.js/webmanifest, nil = wyłączone.
-Mutacje fali 2: filtr mapy, nil usług, odświeżanie indeksu, prośba o kod 2FA, nagłówek cache miniatur.
+Mutacje fali 2: filtr mapy, nil usług, odświeżanie indeksu, nagłówek cache miniatur.
 
 ## Czego nie zrobiono
 
 1. Mapa dziennika czyta najwyżej `DziennikLimitMaks` (50 000) wpisów z zakresu.
-2. Wgrywanie nie jest pokazywane w transferach na żywo (tylko wpis dziennika po zatwierdzeniu); kawałki co 8 MB
-   dałyby migające wpisy.
-3. Brak kodów zapasowych 2FA i wyłączania 2FA przez admina dla innego konta (nie ma tego w usłudze kont).
-4. Kreator nie sprawdza, czy folder udziału istnieje (dysk = magazyn/aplikacja przy przeładowaniu konfiguracji).
+2. Interfejs jeszcze nie wysyła `X-Rozmiar-Calkowity` (bez niego wgranie w transferach ma rozmiar 0 = nieznany).
+   Aktywne wgrania są tylko w pamięci procesu (restart serwera je gubi; wznowienie zaczyna nowy transfer).
+3. Kreator nie sprawdza, czy folder udziału istnieje (dysk = magazyn/aplikacja przy przeładowaniu konfiguracji).
+
+## Poprawki: wgrania w transferach, ciasteczko linku, ZIP linku
+
+- `PUT /api/wgraj`: jeden transfer `wgranie` na cały plik (klucz login+udział+ścieżka). Start: `przesuniecie=0`
+  (poprzedni tego pliku = `przerwane`) albo brak aktywnego; rozmiar = `X-Rozmiar-Calkowity` minus przesunięcie.
+  Kawałki liczone `CzytajZ`; `koniec=1` = `ok`; błąd kawałka/zatwierdzenia = `blad`; przerwanie admina albo
+  rozłączenie = `przerwane` (`ErrPrzerwany` = 409); bez kawałka `CzasBezczynnosciWgrania` (60 s) = `przerwane`
+  (sprawdzane przy każdym `PUT /api/wgraj` i tykaczem `OkresSprzataniaWgran`). Wpis dziennika tylko z `naKoniec`.
+- Ciasteczko linku: `NazwaCiasteczkaLinku`, `WaznoscCiasteczkaLinku` (30 min), `DlugoscKluczaLinkow` (32 B),
+  `PrefiksAPILinku`. Wartość `<unix>.<base64url(HMAC-SHA256(klucz, id|unix))>`, porównanie `hmac.Equal`, czas
+  dalej niż 30 min w przód odrzucany. Ciasteczko nie omija wygaśnięcia ani limitu pobrań linku.
+- `GET /api/publiczny/<id>/zip[?sciezka]`: tylko folder (plik = 400), `ZaliczPobranie` raz, przez `wyslijZip`.
+- Testy: `wgrania_test.go` (tabela: dwa kawałki, bez nagłówka, porzucone przy żądaniu i tykaczem, start od zera,
+  wznowienie, zły kawałek, zły nagłówek; przerwanie admina; brak własnego wpisu „wgranie”), `ciasteczko_linku_test.go`
+  (atrybuty, dobre/złe/wygasłe/podrobione/innego linku, limit linku, podfolder poza linkiem = 400, ZIP). Mutacje
+  (test czerwony): podpis HMAC, id w podpisie, wygasanie ciasteczka, limit linku przy ciasteczku, próg 60 s, sprzątanie.

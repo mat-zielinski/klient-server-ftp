@@ -5,6 +5,7 @@ import (
 	"net"
 	nethttp "net/http"
 
+	"skrytka/wewn/ftp"
 	"skrytka/wewn/magazyn"
 	"skrytka/wewn/uslugi/indeks"
 	"skrytka/wewn/uslugi/miniatury"
@@ -36,9 +37,9 @@ func (u *uslugiMagazynu) zatrzymaj() {
 	}
 }
 
-// liczniki dla monitora: otwarte połączenia HTTP/HTTPS i aktywne transfery (HTTP i FTPS).
+// liczniki dla monitora: otwarte połączenia HTTP/HTTPS i sterujące FTPS oraz aktywne transfery (HTTP i FTPS).
 func (a *Aplikacja) liczniki() (polaczenia, transfery int) {
-	return int(a.polaczeniaHTTP.Load()), len(a.transfery.Aktywne(""))
+	return int(a.polaczeniaHTTP.Load()) + ftp.Polaczenia(), len(a.transfery.Aktywne(""))
 }
 
 // stanPolaczenia liczy połączenia HTTP (hak http.Server.ConnState).

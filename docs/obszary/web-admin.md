@@ -58,8 +58,48 @@
 
 ## Czego nie zrobiono
 
-1. Pobieranie z linku z hasłem idzie przez `fetch` + blob (cały plik w pamięci przeglądarki), bo zwykły link nie
-   wyśle nagłówka `X-Haslo`. Dla dużych plików potrzebne ciasteczko od serwera po poprawnym haśle (patrz raport, D).
-2. Folder w linku publicznym: bez wchodzenia do podfolderów i bez „Pobierz całość jako ZIP” (API nie opisuje).
+1. (Zrobione, patrz „Ekrany wejścia” p. 6) Pobieranie z linku z hasłem szło przez `fetch` + blob; teraz zwykły link z ciasteczkiem.
+2. (Zrobione, patrz „Ekrany wejścia” p. 6) Podfoldery i „Pobierz wszystko (ZIP)” w linku publicznym.
 3. Tworzenie linków publicznych jest na stronie Pliki (web-pliki), tu tylko lista i usuwanie.
 4. Brak edycji istniejącego linku (API nie ma `PUT /api/udostepnienia`).
+
+## Ekrany wejścia (logowanie, kreator, link publiczny): odświeżenie wyglądu
+
+1. **`EkranSrodkowy`**: tło z poświatą (`--kolor-poswiata-1/2`) i wygaszaną siatką (`--kolor-siatka-tla`,
+   `--siatka-tla-rozmiar`), karta półprzezroczysta z cieniem (`--kolor-karta-wejscia`, `--cien-karta-wejscia`),
+   wjazd karty (szanuje `prefers-reduced-motion`). Od progu `waski` w górę dwie kolumny: marka (logo `ikony/logo.ts`,
+   „Twoje pliki, Twój serwer.”, trzy zalety z ikonami), po prawej formularz; węziej tylko logo nad kartą. Prawy
+   górny róg: `PrzelacznikMotywu` (Auto / Jasny / Ciemny, grupa radiowa ze strzałkami; na telefonie same ikony),
+   działa przed zalogowaniem. Stopka: nazwa i wersja. Właściwość `marka?: boolean` wyłącza kolumnę marki.
+2. **`wspolne/PoleHasla.svelte`** `{etykieta, value, autocomplete?, ikona?, podpowiedz?, blad?, opis?, autofocus?,
+   pokaz? (bindable), sila?, minDlugosc?, generator?, onwygeneruj?, zgodne?, onblur?, onkeydown?}`: oko pokaż/ukryj
+   (`aria-label`, `aria-pressed`, nie zabiera fokusu), „Włączony Caps Lock” (`getModifierState`), pasek siły
+   (4 segmenty, Słabe/Średnie/Dobre/Silne: długość względem minimum, 14 i 20 znaków, klasy znaków, kara za
+   powtórzenia), „Wygeneruj” (16 znaków z `crypto.getRandomValues` bez przekrzywienia, bez znaków mylących, każda
+   klasa znaków) z przyciskiem Kopiuj. Czyste funkcje w `<script module>`: `ocenHaslo`, `generujHaslo`.
+3. **`Pole`** dostało opcje (stare użycia bez zmian): `onblur`, `onfocus`, `inputmode`, `maxlength`, `duze`,
+   `sufiks` (snippet), `aria-describedby` do opisu/błędu.
+4. **Kreator**: login pusty z podpowiedzią „np. admin”, `autocomplete` username / new-password. Walidacja „na
+   dotknięciu”: błąd po opuszczeniu pola albo po „Dalej”; „Hasła nie są takie same” także, gdy powtórzenie ma już
+   długość hasła. „Dalej” zawsze aktywny, przy błędzie fokus na pierwsze złe pole (`input[aria-invalid]`). Generator
+   wstawia hasło do obu pól i je pokazuje, zgodne powtórzenie = zielony znaczek. `KrokiKreatora`: tor postępu
+   z animowanym wypełnieniem, ukończone z ptaszkiem i klikalne (`onwybierz`), na telefonie `zwarte` (podpis
+   bieżącego kroku). Przejście kroków: wjazd z boku zależnie od kierunku (`--przesuniecie-krok`, `--czas-krok`).
+   Krok 2: przykłady ścieżek Windows i Linux (klik wstawia). Krok 4: `PodsumowanieKreatora` (karta z ikonami,
+   „Zmień” przy każdym wierszu) i „Uruchom serwer”. `WyborTrybu`: kółko wyboru po prawej.
+5. **Logowanie**: tylko login i hasło (oko, Caps Lock), `api.post('/logowanie')` z `api/klient.ts`; złe dane =
+   komunikat z serwera, hasło czyszczone i fokus na nie; 429 = „Konto tymczasowo zablokowane”. Bez „Zapamiętaj mnie”.
+6. **Publiczny** (na prośbę sesji głównej): hasło w `PoleHasla`; po poprawnym haśle serwer ustawia ciasteczko linku,
+   więc pobieranie i ZIP to zwykłe odnośniki `<a href download>` (`adresPobraniaLinku`, `adresZipLinku`), bez
+   fetch + blob (`pobierzZHaslem` usunięte, `ZWOLNIENIE_POBRANIA_MS` w `stale.ts` nieużywane). Folder: okruszki
+   (`okruszki()`), wchodzenie w podfoldery (`GET …?sciezka=/pod`), „Pobierz wszystko (ZIP)” dla bieżącego folderu.
+   Wygasłe ciasteczko = 401 = ponownie formularz hasła.
+7. Nowe tokeny: ekrany wejścia (`--kolor-poswiata-*`, `--kolor-siatka-tla`, `--kolor-karta-wejscia`,
+   `--kolor-ramka-wejscia`, `--cien-karta-wejscia`, `--kolor-fokus-pola` w obu motywach; `--uklad-wejscie-*`,
+   `--siatka-tla-rozmiar`, `--poswiata-rozmiar`, `--czcionka-haslo-marki`, `--wysokosc-pole-duze`,
+   `--wysokosc-sila-hasla`, `--wysokosc-postep-krokow`, `--przesuniecie-*`, `--czas-krok`,
+   `--czas-postep`, `--krzywa-wejscia`). Nowe ikony: `oko_zamkniete`, `caps_lock`, `generuj`, `rakieta`.
+8. Sprawdzenie: na prośbę użytkownika BEZ testów i bez svelte-check; `npm run build` i `npm run straznik` OK. Podgląd
+   (vite dev + atrapa API w scratchpadzie): kreator kroki 1–4 (błąd „Dalej” z fokusem, generator, powrót klikiem
+   w krok, błąd serwera), logowanie (429), link publiczny z hasłem i podfolderem; motyw jasny i ciemny, szeroki
+   ekran i telefon. Nie sprawdzono z prawdziwym serwerem Go ani czytnikiem ekranu.

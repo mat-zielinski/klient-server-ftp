@@ -20,6 +20,7 @@ func (s *serwer) trasyUdostepnien(m *nethttp.ServeMux) {
 	m.HandleFunc("GET /s/{id}", s.plikStatyczny)
 	m.HandleFunc("GET /api/publiczny/{id}", s.publicznyInfo)
 	m.HandleFunc("GET /api/publiczny/{id}/pobierz", s.publicznyPobierz)
+	m.HandleFunc("GET /api/publiczny/{id}/zip", s.publicznyZip)
 }
 
 // widokLinku: link z gotowym adresem /s/<id>.
@@ -118,26 +119,38 @@ func hasloLinku(r *nethttp.Request) string {
 
 var errAutorBezDostepu = nowyBlad(nethttp.StatusForbidden, "Autor linku nie ma już dostępu do tego elementu.")
 
-// celLinku sprawdza link (ważność, hasło), czy autor nadal ma prawo pobierania, i zwraca pełną
-// ścieżkę w udziale: ścieżka podrzędna z ?sciezka zawsze wewnątrz ścieżki linku.
-func (s *serwer) celLinku(r *nethttp.Request) (udostepnienia.Link, string, string, error) {
-	l, err := s.udostepnienia.Sprawdz(r.PathValue("id"), hasloLinku(r))
+// celPubliczny: link, ścieżka podrzędna (widziana przez odbiorcę) i pełna ścieżka w udziale.
+type celPubliczny struct {
+	link  udostepnienia.Link
+	pod   string
+	pelna string
+	// zHasla: link otwarty poprawnym hasłem (wtedy info wydaje ciasteczko linku).
+	zHasla bool
+}
+
+// celLinku sprawdza link (ważność, hasło albo ciasteczko), czy autor nadal ma prawo pobierania,
+// i zwraca pełną ścieżkę w udziale: ścieżka podrzędna z ?sciezka zawsze wewnątrz ścieżki linku.
+func (s *serwer) celLinku(r *nethttp.Request) (celPubliczny, error) {
+	l, zHasla, err := s.otworzLink(r)
 	if err != nil {
-		return l, "", "", err
+		return celPubliczny{}, err
 	}
 	autor, err := s.konta.Uzytkownik(l.Autor)
 	if err != nil {
-		return l, "", "", errAutorBezDostepu
+		return celPubliczny{}, errAutorBezDostepu
 	}
 	if _, err := s.dostepDoUdzialu(autor, rdzen.OpPobranie, l.Udzial); err != nil {
-		return l, "", "", errAutorBezDostepu
+		return celPubliczny{}, errAutorBezDostepu
 	}
 	pod, err := rdzen.OczyscSciezke(r.URL.Query().Get("sciezka"))
 	if err != nil {
-		return l, "", "", err
+		return celPubliczny{}, err
 	}
 	pelna, err := wewnatrzLinku(l.Sciezka, pod)
-	return l, pod, pelna, err
+	if err != nil {
+		return celPubliczny{}, err
+	}
+	return celPubliczny{link: l, pod: pod, pelna: pelna, zHasla: zHasla}, nil
 }
 
 // wewnatrzLinku łączy ścieżkę linku z podrzędną; wynik poza ścieżką linku = ErrPozaUdzialem.
@@ -161,24 +174,26 @@ func wzglednyWLinku(korzen, pelna string) string {
 	return w
 }
 
-// publicznyInfo: GET /api/publiczny/<id>; złe hasło = 401, wygasły = 410, blokada = 429.
+// publicznyInfo: GET /api/publiczny/<id>[?sciezka=/podfolder]; złe hasło = 401, wygasły = 410,
+// blokada = 429. Po poprawnym haśle ustawia ciasteczko linku (pobieranie zwykłym odnośnikiem).
 func (s *serwer) publicznyInfo(w nethttp.ResponseWriter, r *nethttp.Request) {
-	l, pod, pelna, err := s.celLinku(r)
+	c, err := s.celLinku(r)
 	if err != nil {
 		s.bladLinku(w, r, err)
 		return
 	}
-	wpis, err := s.magazyn.Info(l.Udzial, pelna)
+	l := c.link
+	wpis, err := s.magazyn.Info(l.Udzial, c.pelna)
 	if err != nil {
 		s.blad(w, r, err)
 		return
 	}
 	odp := map[string]any{
 		"id": l.ID, "nazwa": nazwaLinku(l), "folder": wpis.Folder, "rozmiar": wpis.Rozmiar,
-		"zmieniono": wpis.Zmieniono, "wygasa": l.Wygasa, "sciezka": pod, "rodzaj": wpis.Rodzaj,
+		"zmieniono": wpis.Zmieniono, "wygasa": l.Wygasa, "sciezka": c.pod, "rodzaj": wpis.Rodzaj,
 	}
 	if wpis.Folder {
-		wpisy, err := s.magazyn.Lista(l.Udzial, pelna)
+		wpisy, err := s.magazyn.Lista(l.Udzial, c.pelna)
 		if err != nil {
 			s.blad(w, r, err)
 			return
@@ -191,6 +206,9 @@ func (s *serwer) publicznyInfo(w nethttp.ResponseWriter, r *nethttp.Request) {
 			wpisy = []rdzen.Wpis{}
 		}
 		odp["wpisy"] = wpisy
+	}
+	if c.zHasla {
+		s.ustawCiasteczkoLinku(w, r, l)
 	}
 	piszJSON(w, nethttp.StatusOK, odp)
 }
@@ -212,32 +230,59 @@ func (s *serwer) bladLinku(w nethttp.ResponseWriter, r *nethttp.Request, err err
 	s.blad(w, r, err)
 }
 
-// publicznyPobierz: GET /api/publiczny/<id>/pobierz[?sciezka]; folder = ZIP. Pobranie liczone
-// (ZaliczPobranie) przed wysłaniem; wznowienie z Range od środka pliku nie jest liczone drugi raz.
+// publicznyPobierz: GET /api/publiczny/<id>/pobierz[?sciezka]; hasło albo ciasteczko linku; folder = ZIP.
+// Pobranie liczone (ZaliczPobranie) przed wysłaniem; wznowienie z Range od środka pliku nie jest liczone
+// drugi raz.
 func (s *serwer) publicznyPobierz(w nethttp.ResponseWriter, r *nethttp.Request) {
-	l, _, pelna, err := s.celLinku(r)
+	c, err := s.celLinku(r)
 	if err != nil {
 		s.bladLinku(w, r, err)
 		return
 	}
-	wpis, err := s.magazyn.Info(l.Udzial, pelna)
+	wpis, err := s.magazyn.Info(c.link.Udzial, c.pelna)
 	if err != nil {
 		s.blad(w, r, err)
 		return
 	}
 	if czyPelnePobranie(r) {
-		if err := s.udostepnienia.ZaliczPobranie(l.ID); err != nil {
+		if err := s.udostepnienia.ZaliczPobranie(c.link.ID); err != nil {
 			s.blad(w, r, err)
 			return
 		}
 	}
-	kto := konfiguracja.PrefiksKtoLinku + l.ID
+	kto := konfiguracja.PrefiksKtoLinku + c.link.ID
 	if wpis.Folder {
-		s.wyslijZip(w, r, kto, l.Udzial, []string{pelna})
+		s.wyslijZip(w, r, kto, c.link.Udzial, []string{c.pelna})
 		return
 	}
-	s.wyslijPlik(w, r, zadaniePobrania{kto: kto, udzial: l.Udzial, sciezka: pelna,
+	s.wyslijPlik(w, r, zadaniePobrania{kto: kto, udzial: c.link.Udzial, sciezka: c.pelna,
 		podglad: r.URL.Query().Get("podglad") == "1"})
+}
+
+var errNieFolder = nowyBlad(nethttp.StatusBadRequest, "Archiwum ZIP można pobrać tylko dla folderu.")
+
+// publicznyZip: GET /api/publiczny/<id>/zip[?sciezka=/podfolder]; hasło albo ciasteczko linku. Cały
+// folder strumieniem przez rejestr transferów; pobranie liczone raz (ZIP nie ma wznowienia Range).
+func (s *serwer) publicznyZip(w nethttp.ResponseWriter, r *nethttp.Request) {
+	c, err := s.celLinku(r)
+	if err != nil {
+		s.bladLinku(w, r, err)
+		return
+	}
+	wpis, err := s.magazyn.Info(c.link.Udzial, c.pelna)
+	if err != nil {
+		s.blad(w, r, err)
+		return
+	}
+	if !wpis.Folder {
+		s.blad(w, r, errNieFolder)
+		return
+	}
+	if err := s.udostepnienia.ZaliczPobranie(c.link.ID); err != nil {
+		s.blad(w, r, err)
+		return
+	}
+	s.wyslijZip(w, r, konfiguracja.PrefiksKtoLinku+c.link.ID, c.link.Udzial, []string{c.pelna})
 }
 
 // czyPelnePobranie: bez Range albo Range od bajtu 0.

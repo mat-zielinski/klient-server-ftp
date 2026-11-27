@@ -110,3 +110,25 @@ var TypyStatycznych = map[string]string{
 	".js":          "text/javascript; charset=utf-8",
 	".mjs":         "text/javascript; charset=utf-8",
 }
+
+// Wgrywanie przez HTTP widoczne w transferach na żywo (jeden transfer na cały plik).
+const (
+	// NaglowekRozmiaruCalkowitego: rozmiar całego wgrywanego pliku (pasek postępu); brak = 0 (nieznany).
+	NaglowekRozmiaruCalkowitego = "X-Rozmiar-Calkowity"
+	// CzasBezczynnosciWgrania: brak kolejnego kawałka przez tyle czasu = transfer przerwany.
+	CzasBezczynnosciWgrania = 60 * time.Second
+	// OkresSprzataniaWgran: jak często tykacz serwera HTTP szuka porzuconych wgrań.
+	OkresSprzataniaWgran = 10 * time.Second
+)
+
+// Ciasteczko linku publicznego z hasłem (pobieranie zwykłym odnośnikiem, bez blob:).
+const (
+	// NazwaCiasteczkaLinku: HttpOnly, SameSite=Strict, Path=/api/publiczny/<id>.
+	NazwaCiasteczkaLinku = "skrytka_link"
+	// WaznoscCiasteczkaLinku: ważność ciasteczka po poprawnym haśle (nie dłużej niż sam link).
+	WaznoscCiasteczkaLinku = 30 * time.Minute
+	// DlugoscKluczaLinkow: losowy klucz HMAC-SHA256 w pamięci procesu (restart = nowe hasło).
+	DlugoscKluczaLinkow = 32
+	// PrefiksAPILinku: adres API linku publicznego (ścieżka ciasteczka = prefiks + id).
+	PrefiksAPILinku = "/api/publiczny/"
+)

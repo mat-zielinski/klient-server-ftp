@@ -4,6 +4,27 @@ Co wnosi i co poprawia każda wersja, od najnowszej. Numer bieżący: `Wersja` w
 (stopka interfejsu). Wpis powstaje w tej samej zmianie co podbicie wersji. Piszemy, co widzi użytkownik albo
 programista, bez listy plików.
 
+## 0.2 (2026-11-28)
+
+**Nowe**
+- Ikona aplikacji (sejf ze strzałką pobierania) w `skrytka.exe`, przeglądarce, telefonie i menu Linuksa.
+- Ikona w zasobniku przy zegarku: dymek z adresem i prędkością, ikona aktywna przy transferach, menu (Otwórz panel,
+  Kopiuj adres dla klientów, Aktywne transfery, Uruchamiaj z Windows, Folder danych, Zakończ).
+- Nowe ekrany logowania i kreatora: dwie kolumny jak UniFi, przełącznik Auto / Jasny / Ciemny, hasło z podglądem,
+  ostrzeżeniem Caps Lock, siłą hasła i generatorem.
+- Kosz: przeglądanie, przywracanie, trwałe usuwanie, opróżnianie; automatyczne usuwanie wpisów starszych niż 30 dni.
+- Wgrywanie widoczne w transferach na żywo; link publiczny z hasłem pobiera zwykłym linkiem, z podfolderami i ZIP.
+- Instalator i odinstalator dla Linuksa (dane w `/var/lib/skrytka`, ikona i skrót w menu).
+
+**Poprawione**
+- FTPS ucinał większe pliki przy zamykaniu kanału danych (klient dostawał kilkadziesiąt KB).
+- Pasek narzędzi Plików nie zawija się na drugi rząd; tabele na wąskim ekranie nie gubią nazw.
+- Pulpit w trybie VPN nie podaje adresu publicznego jako dostępnego; Dziennik odświeża się sam po pobraniu.
+- Logo nie rysowało się (blokada stylów przez CSP).
+
+**Usunięte**
+- Logowanie dwuetapowe (2FA), decyzja usera.
+
 ## 0.1 (2026-11-27)
 
 **Nowe**
@@ -19,7 +40,7 @@ programista, bez listy plików.
 - Wygląd jak stacja Programator_Czarek: pasek boczny po lewej, tokeny kolorów stacji, motyw ciemny, jasny i
   automatyczny, paleta poleceń Ctrl+K, skróty, galeria z miniaturami, płynne listy przy dziesiątkach tysięcy plików,
   aplikacja na telefon (PWA).
-- Bezpieczeństwo: hasła argon2id, blokada po złych hasłach, 2FA (TOTP), lista zalogowanych urządzeń, bramka
+- Bezpieczeństwo: hasła argon2id, blokada po złych hasłach, lista zalogowanych urządzeń, bramka
   uprawnień przy każdej operacji, ochrona przed wyjściem poza udział (także dowiązania i junction), CSRF, CSP.
 - Tryby sieci VPN (WireGuard, LAN) i publiczny (wymuszone HTTPS), certyfikat własny, z pliku albo Let's Encrypt,
   reguła Zapory Windows z Ustawień, kreator pierwszego uruchomienia, usługa Windows i systemd.

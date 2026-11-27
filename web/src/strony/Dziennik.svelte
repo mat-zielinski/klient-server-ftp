@@ -2,10 +2,14 @@
   // Dziennik pobrań: zakres i krok, kafle sum, wykres słupkowy bajtów i liczby pobrań, pierścień protokołów,
   // top pliki, top klienci (admin), tabela wpisów z filtrami i eksportem CSV.
   // Zwykły użytkownik widzi tylko własne wpisy (filtruje serwer); interfejs chowa wtedy „kto” i ranking klientów.
+  // Na żywo: po zakończonym transferze (SSE) odświeża statystyki i tabelę, gdy zakres obejmuje chwilę obecną.
+  import { onMount } from 'svelte'
   import { api, trescBledu } from '../api/klient'
+  import { sluchajTransferow } from '../api/transfery'
   import type { PozycjaRankingu, Statystyki } from '../api/typy'
   import Kafel from '../komponenty/wspolne/Kafel.svelte'
   import Karta from '../komponenty/wspolne/Karta.svelte'
+  import Pigulka from '../komponenty/wspolne/Pigulka.svelte'
   import Przycisk from '../komponenty/wspolne/Przycisk.svelte'
   import Pusto from '../komponenty/wspolne/Pusto.svelte'
   import WykresSlupkowy from '../komponenty/wykresy/WykresSlupkowy.svelte'
@@ -14,9 +18,9 @@
   import type { Pozycja, PunktSlupka, Seria } from '../komponenty/wykresy/skala'
   import WyborZakresu from '../komponenty/transfery/WyborZakresu.svelte'
   import TabelaDziennika from '../komponenty/transfery/TabelaDziennika.svelte'
-  import { DZIENNIK } from '../komponenty/transfery/stale'
+  import { DZIENNIK, PULPIT } from '../komponenty/transfery/stale'
   import { nazwaProtokolu, odmiana } from '../komponenty/transfery/typy'
-  import { dataPola, etykietaPunktu, opisPunktu, parametryZakresu, type Zakres } from '../komponenty/transfery/zakres'
+  import { dataPola, etykietaPunktu, granice as graniceZakresu, opisPunktu, parametryZakresu, type Zakres } from '../komponenty/transfery/zakres'
   import { liczbaCala, rozmiar } from '../stan/format'
   import { sesja } from '../stan/sesja.svelte'
   import { uklad } from '../stan/uklad.svelte'
@@ -26,6 +30,10 @@
   let statystyki = $state<Statystyki | null>(null)
   let blad = $state('')
   let wczytywanie = $state(false)
+  /** Licznik odświeżeń: zmiana wymusza ponowne zapytanie tabeli, nawet gdy granice zakresu się nie zmieniły. */
+  let odswiezenie = $state(0)
+  /** Czy strumień transferów działa (przyszła pierwsza suma). */
+  let naZywo = $state(false)
 
   const admin = $derived(sesja.admin)
   // Granice liczone raz na zmianę zakresu (nie co sekundę), wspólne dla statystyk, tabeli i eksportu.
@@ -50,6 +58,39 @@
       })
     return () => {
       aktualne = false
+    }
+  })
+
+  function odswiez() {
+    zakres = { ...zakres }
+    odswiezenie += 1
+  }
+
+  /** Czy zakres obejmuje chwilę obecną (dla zakresów kończących się „teraz” koniec liczony od nowa). */
+  function obejmujeTeraz(): boolean {
+    const teraz = new Date()
+    const g = graniceZakresu(zakres, teraz)
+    return g.od.getTime() <= teraz.getTime() && teraz.getTime() <= g.do.getTime()
+  }
+
+  // Koniec transferu zapisuje wpis dziennika zaraz potem: odświeżamy z opóźnieniem, kilka końców = jedno odświeżenie.
+  onMount(() => {
+    let zegar: ReturnType<typeof setTimeout> | null = null
+    const zatrzymaj = sluchajTransferow(
+      (z) => {
+        if (z.typ !== 'koniec' || zegar) return
+        zegar = setTimeout(() => {
+          zegar = null
+          if (obejmujeTeraz()) odswiez()
+        }, PULPIT.poKoncuMs)
+      },
+      () => {
+        naZywo = true
+      },
+    )
+    return () => {
+      if (zegar) clearTimeout(zegar)
+      zatrzymaj()
     }
   })
 
@@ -87,8 +128,11 @@
 <div class="dziennik">
   <div class="pasek-zakresu">
     <WyborZakresu bind:zakres />
-    <Przycisk rodzaj="duch" rozmiar="maly" ikona="odswiez" tytul="Odśwież" onclick={() => (zakres = { ...zakres })} />
+    <Przycisk rodzaj="duch" rozmiar="maly" ikona="odswiez" tytul="Odśwież" onclick={odswiez} />
     {#if wczytywanie}<span class="opis">Wczytywanie…</span>{/if}
+    <span class="na-zywo">
+      <Pigulka stan={naZywo ? 'ok' : 'wyl'} kropka>{naZywo ? 'Na żywo' : 'Łączenie'}</Pigulka>
+    </span>
   </div>
 
   {#if blad}
@@ -132,7 +176,7 @@
     {/if}
   </div>
 
-  <TabelaDziennika od={granice.od} doCzasu={granice.do} {admin} />
+  <TabelaDziennika od={granice.od} doCzasu={granice.do} {admin} {odswiezenie} />
 </div>
 
 <style>
@@ -147,6 +191,9 @@
     align-items: center;
     gap: var(--odstep-4);
     flex-wrap: wrap;
+  }
+  .na-zywo {
+    margin-left: auto;
   }
   .rzad {
     display: grid;

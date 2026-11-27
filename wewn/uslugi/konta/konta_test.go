@@ -71,6 +71,37 @@ func TestPlikZapisIOdczyt(t *testing.T) {
 	_ = k // celowo: k tylko tworzy plik
 }
 
+// TestStarePoleWPlikuZnikaPrzyZapisie: plik z wersji, która miała nieużywane już pole "dwa_fa",
+// dalej się wczytuje (nieznane pole pominięte), a pierwszy zapis je usuwa.
+func TestStarePoleWPlikuZnikaPrzyZapisie(t *testing.T) {
+	plik := filepath.Join(t.TempDir(), "konta.json")
+	tresc := `{"konta":[{"login":"jan"}],"dwa_fa":{"jan":"JBSWY3DPEHPK3PXP"}}`
+	if err := os.WriteFile(plik, []byte(tresc), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	k, err := Otworz(plik)
+	if err != nil {
+		t.Fatal(err)
+	}
+	k.param = tanieParametry
+	if _, err := k.Uzytkownik("jan"); err != nil {
+		t.Fatal(err)
+	}
+	if err := k.UstawHaslo("jan", hasloJana); err != nil {
+		t.Fatal(err)
+	}
+	dane, err := os.ReadFile(plik)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(dane), "dwa_fa") {
+		t.Fatal("stare pole zostało w pliku po zapisie")
+	}
+	if _, err := k.Zaloguj("jan", hasloJana, "10.0.0.1"); err != nil {
+		t.Fatalf("logowanie samym hasłem: %v", err)
+	}
+}
+
 func TestBladZapisuNieZmieniaStanu(t *testing.T) {
 	k, _, plik := kontaZAdminemIJanem(t)
 	// Katalog w miejscu pliku tymczasowego: zapis się nie uda.

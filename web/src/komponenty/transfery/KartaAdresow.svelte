@@ -1,6 +1,7 @@
 <script lang="ts">
   // Karta „Adresy serwera” (GET /api/siec): LAN, WireGuard, publiczny; adresy HTTPS i FTPS do skopiowania,
-  // porty ze stanem otwarcia i odcisk certyfikatu.
+  // porty ze stanem otwarcia i odcisk certyfikatu. W trybie VPN adres publiczny jest wyszarzony (serwer nie słucha
+  // na nim), a adres WireGuard (bez niego LAN) wyróżniony jako zalecany dla klientów.
   import type { Adres } from '../../api/typy'
   import Karta from '../wspolne/Karta.svelte'
   import Pigulka from '../wspolne/Pigulka.svelte'
@@ -24,6 +25,12 @@
     }
     return lista.sort((a, b) => KOLEJNOSC.indexOf(a.rodzaj) - KOLEJNOSC.indexOf(b.rodzaj))
   })
+
+  const trybVpn = $derived(siec?.tryb !== 'publiczny')
+  /** Rodzaj adresu zalecanego w trybie VPN: WireGuard, a gdy go brak, LAN. */
+  const zalecany = $derived<Adres['rodzaj'] | null>(
+    !trybVpn ? null : adresy.some((a) => a.rodzaj === 'wireguard') ? 'wireguard' : adresy.some((a) => a.rodzaj === 'lan') ? 'lan' : null,
+  )
 
   const porty = $derived(
     siec
@@ -55,17 +62,28 @@
       {#each adresy as a (a.ip)}
         {@const https = `https://${host(a.ip)}:${siec.porty.https}`}
         {@const ftps = `ftps://${host(a.ip)}:${siec.porty.ftps}`}
-        <li>
+        {@const niedostepny = trybVpn && a.rodzaj === 'publiczny'}
+        <li class:niedostepny class:zalecany={a.rodzaj === zalecany}>
           <div class="naglowek">
-            <Pigulka stan={STAN_RODZAJU[a.rodzaj]}>{NAZWY_RODZAJU[a.rodzaj]}</Pigulka>
+            <Pigulka stan={niedostepny ? 'wyl' : STAN_RODZAJU[a.rodzaj]}>{NAZWY_RODZAJU[a.rodzaj]}</Pigulka>
             <span class="interfejs skroc">{a.interfejs}</span>
+            {#if niedostepny}
+              <Pigulka stan="wyl">Niedostępny w trybie VPN</Pigulka>
+            {:else if a.rodzaj === zalecany}
+              <Pigulka stan="ok" kropka>Zalecany dla klientów</Pigulka>
+            {/if}
           </div>
-          {#each [https, ftps] as adres (adres)}
-            <div class="adres">
-              <code class="skroc">{adres}</code>
-              <Przycisk rodzaj="duch" rozmiar="maly" ikona="kopiuj" tytul="Kopiuj {adres}" onclick={() => skopiuj(adres)} />
-            </div>
-          {/each}
+          {#if niedostepny}
+            <div class="adres"><code class="skroc">{a.ip}</code></div>
+            <p class="opis-adresu">Klienci łączą się przez WireGuard adresem LAN.</p>
+          {:else}
+            {#each [https, ftps] as adres (adres)}
+              <div class="adres">
+                <code class="skroc">{adres}</code>
+                <Przycisk rodzaj="duch" rozmiar="maly" ikona="kopiuj" tytul="Kopiuj {adres}" onclick={() => skopiuj(adres)} />
+              </div>
+            {/each}
+          {/if}
         </li>
       {:else}
         <li class="opis">Brak adresów sieciowych.</li>
@@ -110,8 +128,23 @@
     flex-direction: column;
     gap: var(--odstep-4);
   }
+  .zalecany {
+    background: var(--kolor-tlo-ok);
+    border-radius: var(--promien-segment);
+    padding: var(--odstep-3);
+  }
+  .niedostepny code {
+    color: var(--kolor-wylaczony-napis);
+    background: var(--kolor-wylaczony-tlo);
+  }
+  .opis-adresu {
+    margin: var(--odstep-1) 0 0;
+    color: var(--kolor-wylaczony-napis);
+    font-size: var(--czcionka-maly);
+  }
   .naglowek {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--odstep-3);
     margin-bottom: var(--odstep-1);

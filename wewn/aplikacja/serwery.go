@@ -77,6 +77,7 @@ func (a *Aplikacja) start(ctx context.Context) error {
 	a.monitor.Uruchom(ctx)
 	a.sprzatajMiniatury()
 	a.uruchomSprzatanie(ctx, konfiguracja.OkresSprzataniaUdostepnien)
+	a.uruchomOproznianieKosza(ctx, konfiguracja.KoszOkresOprozniania)
 	a.zglos(opisStartu(k, s.adresyHTTPS, s.adresHTTP))
 	return nil
 }
