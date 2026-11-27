@@ -1,0 +1,19 @@
+#!/bin/sh
+# Hak git TREŚCI COMMITA (Skrytka). Włącza go raz na komputer: skrypty\wlacz_haki_git.bat albo skrypty/wlacz_haki_git.sh.
+# Zmiana logiki = testy w tym samym commicie: blokuje commit, który zmienia pliki *.go (poza *_test.go i samą wersją
+# wewn/konfiguracja/wersja.go), a nie zmienia żadnego *_test.go. Świadomy wyjątek (np. sama zmiana napisu, refaktor
+# pokryty istniejącymi testami) trzeba napisać w treści commita: „[bez testów: <powód>]”.
+# Obejście `--no-verify` jest zakazane zasadami projektu.
+cd "$(git rev-parse --show-toplevel)" || exit 1
+
+ZMIANY=$(git diff --cached --name-only --diff-filter=ACMRD)
+KOD=$(printf '%s\n' "$ZMIANY" | grep -E '\.go$' | grep -vE '_test\.go$' | grep -vx 'wewn/konfiguracja/wersja.go')
+[ -z "$KOD" ] && exit 0
+printf '%s\n' "$ZMIANY" | grep -qE '_test\.go$' && exit 0
+grep -qE '\[bez test(ó|o)w: *[^] ][^]]*\]' "$1" && exit 0
+
+echo "COMMIT ZABLOKOWANY: zmiana kodu Go bez zmiany testów (*_test.go):"
+printf '%s\n' "$KOD" | sed 's/^/  /'
+echo "  Dopisz albo popraw testy, które pilnują nowego działania (test ma paść bez tej zmiany)."
+echo "  Świadomy wyjątek: w treści commita „[bez testów: <powód>]”."
+exit 1

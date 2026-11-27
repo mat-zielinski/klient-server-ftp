@@ -1,0 +1,174 @@
+/* Style globalne: reset, typografia, przewijanie, zaznaczenie, klasy pomocnicze. Tylko tokeny z tokeny.css. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--kolor-okno);
+  color: var(--kolor-tekst);
+  font-family: var(--czcionka-ui);
+  font-size: var(--czcionka-tekst);
+  font-weight: var(--czcionka-normalny);
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+}
+
+#aplikacja {
+  height: 100%;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+
+h1,
+h2 {
+  font-size: var(--czcionka-tytul-strony);
+  font-weight: var(--czcionka-gruby);
+}
+
+h3,
+h4 {
+  font-size: var(--czcionka-tytul-karty);
+  font-weight: var(--czcionka-gruby);
+}
+
+a {
+  color: var(--kolor-niebieski);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+}
+
+code,
+kbd,
+pre,
+.mono {
+  font-family: var(--czcionka-mono);
+}
+
+::selection {
+  background: var(--kolor-niebieski-tlo);
+  color: var(--kolor-na-ciemnym);
+}
+
+:focus-visible {
+  outline: var(--odstep-ramka) solid var(--kolor-niebieski);
+  outline-offset: var(--odstep-ramka);
+}
+
+/* przewijanie jak w stacji: wąskie, bez strzałek, uchwyt w kolorze przycisku */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--kolor-przycisk) transparent;
+}
+
+::-webkit-scrollbar {
+  width: var(--wysokosc-przewijak);
+  height: var(--wysokosc-przewijak);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--kolor-przycisk);
+  border-radius: var(--promien-kropka);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--kolor-przycisk-hover);
+}
+
+/* klasy pomocnicze (jak klasy makiety stacji) */
+.opis {
+  color: var(--kolor-opis);
+  font-size: var(--czcionka-maly);
+}
+
+.etykieta {
+  color: var(--kolor-opis);
+  font-size: var(--czcionka-etykieta);
+  font-weight: var(--czcionka-gruby);
+  letter-spacing: var(--czcionka-rozstaw-etykiety);
+  text-transform: uppercase;
+}
+
+.licznik {
+  font-family: var(--czcionka-mono);
+  font-size: var(--czcionka-maly);
+  font-weight: var(--czcionka-polgruby);
+  background: var(--kolor-karta);
+  border-radius: var(--promien-liczba);
+  padding: var(--odstep-s) var(--odstep-przycisk-maly);
+}
+
+.skroc {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.wiersz {
+  display: flex;
+  align-items: center;
+  gap: var(--odstep-m);
+}
+
+.siatka-kafli {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--uklad-kafel-min-w), 1fr));
+  gap: var(--odstep-l);
+}
+
+.tylko-czytnik {
+  position: absolute;
+  width: var(--odstep-ramka);
+  height: var(--odstep-ramka);
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

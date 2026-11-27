@@ -1,0 +1,22 @@
+#!/bin/sh
+# Hak git PRZED COMMITEM (Skrytka). Włącza go raz na komputer: skrypty\wlacz_haki_git.bat albo skrypty/wlacz_haki_git.sh
+# (git config core.hooksPath .githooks). Blokuje commit, gdy:
+#   1) w commicie są dane tego komputera (konta, udostępnienia, konfiguracja, certyfikaty, logi, *.conf),
+#   2) nie przechodzi „sprawdz.sh szybko” (go vet dla Windows i Linuksa + strażnik; to samo co sprawdz.bat szybko).
+# Testy idą przy push (.githooks/pre-push). Obejście `--no-verify` jest zakazane zasadami projektu.
+cd "$(git rev-parse --show-toplevel)" || exit 1
+. .githooks/wspolne.sh
+
+ZAKAZANE_PLIKI=$(git diff --cached --name-only --diff-filter=ACMR | zakazane_w_liscie)
+if [ -n "$ZAKAZANE_PLIKI" ]; then
+    echo "COMMIT ZABLOKOWANY: dane tego komputera nie mogą trafić do repo (repo jest publiczne):"
+    printf '%s\n' "$ZAKAZANE_PLIKI" | sed 's/^/  /'
+    echo "  wyjmij je z commitu: git restore --staged <plik>"
+    exit 1
+fi
+
+if ! sh ./sprawdz.sh szybko; then
+    echo "COMMIT ZABLOKOWANY: popraw zgłoszone wyżej naruszenia (opis reguł: narzedzia_dev/README.md)"
+    exit 1
+fi
+exit 0

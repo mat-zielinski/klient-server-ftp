@@ -1,0 +1,96 @@
+{
+  "_opis": "Lista mutacji strażnika narzedzia_dev/mutacje: blokada bezpieczeństwa usunięta (szukaj -> zamien) MUSI wywrócić testy pakietu (pole testy = opcjonalny wzorzec -run). Nowa blokada bezpieczeństwa = wpis tutaj + test, który bez niej pada. Wpis z polem do_uzupelnienia jest pomijany z ostrzeżeniem.",
+  "mutacje": [
+    {
+      "id": "rdzen_sciezka_kropki",
+      "opis": "OczyscSciezke odrzuca człon „..” (wyjście poza udział)",
+      "plik": "wewn/rdzen/sciezki.go",
+      "szukaj": "\t\tcase c == \"..\":\n\t\t\treturn \"\", ErrPozaUdzialem\n",
+      "zamien": "\t\tcase c == \"..\" && false:\n\t\t\treturn \"\", ErrPozaUdzialem\n",
+      "pakiet": "./wewn/rdzen"
+    },
+    {
+      "id": "rdzen_sciezka_dysk",
+      "opis": "OczyscSciezke odrzuca człon z literą dysku („C:”)",
+      "plik": "wewn/rdzen/sciezki.go",
+      "szukaj": "\t\tcase czyDysk(c):\n",
+      "zamien": "\t\tcase czyDysk(c) && false:\n",
+      "pakiet": "./wewn/rdzen"
+    },
+    {
+      "id": "rdzen_sciezka_druga_linia",
+      "opis": "SciezkaNaDysku: druga linia obrony, wynik po złączeniu musi leżeć wewnątrz korzenia udziału",
+      "plik": "wewn/rdzen/sciezki.go",
+      "szukaj": "\tif !wewnatrzKorzenia(kor, wynik) {\n",
+      "zamien": "\tif false {\n",
+      "pakiet": "./wewn/rdzen"
+    },
+    {
+      "id": "rdzen_sciezka_korzen_wzgledny",
+      "opis": "SciezkaNaDysku odrzuca pusty albo względny korzeń udziału",
+      "plik": "wewn/rdzen/sciezki.go",
+      "szukaj": "\tif korzen == \"\" || !filepath.IsAbs(korzen) {\n",
+      "zamien": "\tif false {\n",
+      "pakiet": "./wewn/rdzen"
+    },
+    {
+      "id": "bramka_wylaczony",
+      "opis": "CzyWolno: wyłączone konto nie ma żadnych praw",
+      "plik": "wewn/rdzen/bramka.go",
+      "szukaj": "\tif u.Wylaczony {\n",
+      "zamien": "\tif false {\n",
+      "pakiet": "./wewn/rdzen"
+    },
+    {
+      "id": "bramka_admin_tylko_odczyt",
+      "opis": "CzyWolno: admin też nie zapisuje w udziale tylko do odczytu",
+      "plik": "wewn/rdzen/bramka.go",
+      "szukaj": "\t\tif zapis && tylkoOdczyt {\n",
+      "zamien": "\t\tif false {\n",
+      "pakiet": "./wewn/rdzen"
+    },
+    {
+      "id": "bramka_zapis_wymaga_prawa",
+      "opis": "CzyWolno: wgranie, zmiana i usunięcie wymagają PrawoZapis",
+      "plik": "wewn/rdzen/bramka.go",
+      "szukaj": "\tif prawo != PrawoZapis {\n",
+      "zamien": "\tif false {\n",
+      "pakiet": "./wewn/rdzen"
+    },
+    {
+      "id": "bramka_tylko_odczyt",
+      "opis": "CzyWolno: zapis w udziale tylko do odczytu = ErrTylkoOdczyt",
+      "plik": "wewn/rdzen/bramka.go",
+      "szukaj": "\tif tylkoOdczyt {\n\t\treturn ErrTylkoOdczyt\n\t}\n\treturn nil\n}\n",
+      "zamien": "\treturn nil\n}\n",
+      "pakiet": "./wewn/rdzen"
+    },
+    {
+      "id": "straznik_warstwy",
+      "opis": "Strażnik architektury: import do warstwy na tym samym poziomie (np. http -> ftp) jest zabroniony",
+      "plik": "narzedzia_dev/straznik/architektura.go",
+      "szukaj": "\tcase wc.Poziom >= z.Poziom:\n",
+      "zamien": "\tcase wc.Poziom > z.Poziom:\n",
+      "pakiet": "./narzedzia_dev/straznik",
+      "testy": "TestArchitekturaImporty"
+    },
+    {
+      "id": "straznik_system_windows",
+      "opis": "Strażnik systemu: import golang.org/x/sys/windows w pliku budowanym też na Linuksie jest zgłaszany",
+      "plik": "narzedzia_dev/straznik/system.go",
+      "szukaj": "\t\tif naLinuksie && maPrefiks(sciezka, PakietyWindows) {\n",
+      "zamien": "\t\tif false {\n",
+      "pakiet": "./narzedzia_dev/straznik",
+      "testy": "TestSystem"
+    },
+    {
+      "id": "straznik_celowo",
+      "opis": "Strażnik jakości: `_ = f()` bez komentarza „// celowo: <powód>” jest zgłaszane",
+      "plik": "narzedzia_dev/straznik/jakosc.go",
+      "szukaj": "\t\t\t\tif !p.komentarzCelowo(f.Drzewo, l-1, l) {\n",
+      "zamien": "\t\t\t\tif false {\n",
+      "pakiet": "./narzedzia_dev/straznik",
+      "testy": "TestJakoscCicheBledy"
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+{
+  "_opis": "Wyjątki strażnika narzedzia_dev/straznik. Każdy wpis: regula (np. jakosc.dlugosc_funkcji), plik (ścieżka względna z /), nazwa (opcjonalnie, np. Typ.Metoda albo importowany pakiet), uzasadnienie (obowiązkowe). Wyjątek nieużywany jest zgłaszany: usuń go. Domyślnie pusto: kod ma spełniać reguły.",
+  "wyjatki": []
+}

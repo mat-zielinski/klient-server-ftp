@@ -1,0 +1,64 @@
+SKRYTKA (serwer plików) — instalacja na Twoim komputerze (dla właściciela serwera)
+=================================================================================
+
+Wersja 0.1. Ten opis jest dla Ciebie, czyli osoby, która udostępnia pliki. Osobom pobierającym przekaż
+docs\dla_klienta.md.
+
+Uwaga: wersja 0.1 to szkielet. Kroki niżej opisują działanie docelowe (po sprintach 1-5 z PLAN.md);
+kreator, usługa Windows i ikona w zasobniku jeszcze nie działają.
+
+1. Przygotuj folder programu
+   Skopiuj folder Skrytka (z plikiem skrytka.exe) w dowolne miejsce, np. C:\Skrytka. Program nie ma ścieżek
+   na sztywno: swoje pliki trzyma obok siebie (dane\ i logi\). Nie kładź go w folderze, który udostępniasz.
+
+2. Pierwsze uruchomienie (kreator)
+   Uruchom skrytka.exe. Otworzy się przeglądarka z kreatorem (jeśli nie, wejdź na https://127.0.0.1:8443):
+     a) Konto administratora: login i hasło (co najmniej 10 znaków). Hasło zapisuje się tylko jako hash.
+     b) Pierwszy udział: nazwa widoczna dla klientów (np. Filmy) i folder na dysku (np. D:\Udostepnione),
+        zaznacz „Tylko do odczytu”, jeśli nikt nie ma tam niczego wgrywać.
+     c) Tryb sieci: VPN (zalecany) albo Publiczny (opis w punkcie 4).
+   Przeglądarka ostrzeże o certyfikacie: Skrytka tworzy własny certyfikat w dane\certyfikaty\. Na Pulpicie
+   programu widać jego odcisk (SHA-256), który klienci porównują przy pierwszym wejściu.
+
+3. Konta dla klientów
+   Strona Użytkownicy: dodaj konto każdej osobie, która ma pobierać. Ustaw prawo do udziałów
+   (odczyt albo zapis) i zaznacz „FTPS”, jeśli ma korzystać z FileZilli, WinSCP albo Total Commandera.
+   Hasło przekaż osobno (nie w tej samej wiadomości co adres).
+
+4. Sieć
+   Tryb VPN (WireGuard, zalecany):
+     - Serwer WireGuard zostaje na routerze (np. UniFi). Skrytka go nie konfiguruje.
+     - W konfiguracji klienta WireGuard pole „Dozwolone adresy IP” (AllowedIPs) musi obejmować Twoją sieć LAN,
+       np. 192.168.0.0/24 (przykład; wpisz swoją sieć).
+     - Skrytka słucha tylko na adresach LAN i tunelu; z internetu jej nie widać.
+     - Adres dla klientów jest na Pulpicie, np. https://192.168.0.10:8443.
+   Tryb publiczny (adres zewnętrzny + otwarty port):
+     - Na routerze przekieruj porty na swój komputer: HTTPS (domyślnie 8443), FTPS (2121) i porty pasywne FTPS
+       (50000-50100), jeśli ma działać FTPS.
+     - Serwer wymusza HTTPS i FTPS, zwykłe FTP jest wyłączone, po kilku złych hasłach adres jest blokowany.
+     - Certyfikat: własny (klient sprawdza odcisk) albo Let's Encrypt, gdy masz domenę wskazującą na Twój adres
+       (pole domena_lets_encrypt w Ustawieniach).
+   Zapora Windows: Ustawienia → Sieć → „Dodaj regułę Zapory” (pyta o zgodę administratora). Bez reguły inne
+   urządzenia nie połączą się z serwerem.
+   Test: Ustawienia → Sieć pokazuje, które porty nasłuchują. Sprawdź też z telefonu (przez WireGuard albo z
+   sieci komórkowej w trybie publicznym).
+
+5. Na co dzień
+   - Pulpit: adresy serwera, aktywne pobrania, łączna prędkość, wolne miejsce w udziałach.
+   - Dziennik: kto, co i kiedy pobrał; eksport CSV.
+   - Udostępnienia: linki publiczne z datą wygaśnięcia, hasłem i limitem pobrań.
+   - Usunięte pliki trafiają do kosza aplikacji: folder .skrytka_kosz w korzeniu udziału.
+
+Uwagi
+-----
+- Pliki tego komputera (nie kopiuj ich innym osobom i nie wysyłaj nigdzie):
+    dane\konfiguracja.json   ustawienia (porty, udziały, tryb sieci)
+    dane\konta.json          konta i hashe haseł
+    dane\udostepnienia.json  linki publiczne
+    dane\certyfikaty\        klucz prywatny i certyfikat serwera
+    logi\                    dziennik pobrań i błędów
+  Przenosiny na inny komputer: skopiuj cały folder programu razem z dane\ (zachowasz konta, linki i ten sam
+  odcisk certyfikatu).
+- Zmiana portów albo trybu sieci w Ustawieniach wymaga restartu serwera.
+- Przy problemie zajrzyj do logi\dziennik_RRRR-MM.jsonl i logi\bledy.log (strona Dziennik pokazuje to samo).
+- Budowanie programu ze źródeł: README.md, sekcja Budowanie (skrypty\buduj.bat).

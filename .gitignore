@@ -1,0 +1,35 @@
+# Repo jest PUBLICZNE: nigdy danych, haseł, certyfikatów, logów ani konfiguracji WireGuard.
+
+# Narzędzia i zależności
+_go-portable/
+web/node_modules/
+
+# Zbudowany interfejs: poza repo, ale go:embed potrzebuje choć jednego pliku
+web/dist/*
+!web/dist/index.html
+
+# Wyniki budowania
+wyjscie/
+*.exe
+
+# Dane tego komputera (konta, hashe haseł, linki, konfiguracja, klucz i certyfikat)
+dane/konta.json
+dane/udostepnienia.json
+dane/konfiguracja.json
+dane/certyfikaty/
+
+# Logi i kopie
+logi/
+kopie/
+
+# Konfiguracja WireGuard (klucze prywatne)
+*.conf
+
+# Pliki tymczasowe (zapis atomowy, wgrywanie w kawałkach)
+*.tmp
+*.skrytka_czesc
+dane/skrytka.lock
+dane/miniatury/
+*.mutacja_kopia
+*.mutacja_tmp
+*.mutacja_konflikt

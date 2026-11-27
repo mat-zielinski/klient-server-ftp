@@ -1,0 +1,164 @@
+# Wydanie Skrytki przy pushu tagu v* (np. v0.2): interfejs budowany raz, binarki Go dla Windows i Linux,
+# paczki zip / tar.gz, sumy SHA256SUMS.txt i wydanie w GitHub Releases. Opis: docs/obszary/ci.md.
+name: Wydanie
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wydanie-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  GOTOOLCHAIN: local
+  CGO_ENABLED: "0"
+
+jobs:
+  interfejs:
+    name: Interfejs (web/dist)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Pobranie kodu
+        uses: actions/checkout@v5
+
+      - name: Instalacja Node (LTS)
+        uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Budowa interfejsu
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+          npm run straznik
+
+      - name: Przekazanie web/dist
+        uses: actions/upload-artifact@v5
+        with:
+          name: web-dist
+          path: web/dist/
+          if-no-files-found: error
+          retention-days: 1
+
+  binarki:
+    name: Binarki (${{ matrix.cel }})
+    needs: interfejs
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - cel: windows-amd64
+            goos: windows
+            goarch: amd64
+          - cel: linux-amd64
+            goos: linux
+            goarch: amd64
+          - cel: linux-arm64
+            goos: linux
+            goarch: arm64
+    steps:
+      - name: Pobranie kodu
+        uses: actions/checkout@v5
+
+      - name: Instalacja Go (wersja z go.mod)
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Wstawienie zbudowanego interfejsu
+        uses: actions/download-artifact@v6
+        with:
+          name: web-dist
+          path: web/dist
+
+      - name: Budowa i pakowanie
+        env:
+          TAG: ${{ github.ref_name }}
+          CEL: ${{ matrix.cel }}
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          set -euo pipefail
+          nazwa="skrytka-${TAG}-${CEL}"
+          katalog="paczka/${nazwa}"
+          mkdir -p "$katalog" wynik
+          flagi="-s -w -X skrytka/wewn/konfiguracja.WersjaBudowy=${TAG}"
+          if [ "$GOOS" = "windows" ]; then
+            go build -trimpath -ldflags "$flagi -H windowsgui" -o "$katalog/skrytka.exe" ./cmd/skrytka
+            go build -trimpath -ldflags "$flagi" -o "$katalog/skrytka_konsola.exe" ./cmd/skrytka
+          else
+            go build -trimpath -ldflags "$flagi" -o "$katalog/skrytka" ./cmd/skrytka
+            chmod +x "$katalog/skrytka"
+          fi
+          cp README.md INSTALACJA.txt docs/dla_klienta.md "$katalog/"
+          if [ "$GOOS" = "windows" ]; then
+            (cd paczka && zip -r -q "../wynik/${nazwa}.zip" "$nazwa")
+          else
+            if [ ! -f skrypty/instaluj-linux.sh ]; then
+              echo "::error::Brak skrypty/instaluj-linux.sh: paczka Linux byłaby niepełna."
+              exit 1
+            fi
+            cp skrypty/instaluj-linux.sh "$katalog/"
+            chmod +x "$katalog/instaluj-linux.sh"
+            tar -czf "wynik/${nazwa}.tar.gz" -C paczka "$nazwa"
+          fi
+          ls -l wynik
+
+      - name: Przekazanie paczki
+        uses: actions/upload-artifact@v5
+        with:
+          name: paczka-${{ matrix.cel }}
+          path: wynik/*
+          if-no-files-found: error
+          retention-days: 1
+
+  wydanie:
+    name: Wydanie w GitHub Releases
+    needs: binarki
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Zebranie paczek
+        uses: actions/download-artifact@v6
+        with:
+          pattern: paczka-*
+          path: wynik
+          merge-multiple: true
+
+      - name: Sumy SHA-256
+        working-directory: wynik
+        run: |
+          set -euo pipefail
+          sha256sum -- * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Utworzenie wydania
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          dodatki=()
+          if [[ "$TAG" == *-* ]]; then
+            dodatki+=(--prerelease)
+          fi
+          gh release create "$TAG" wynik/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Skrytka $TAG" \
+            --generate-notes \
+            --verify-tag \
+            "${dodatki[@]}"

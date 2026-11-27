@@ -1,0 +1,84 @@
+# Budowa i testy Skrytki na Windows i Linux przy każdym pushu i pull requeście do main.
+# Opis: docs/obszary/ci.md.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GOTOOLCHAIN: local
+  CGO_ENABLED: "0"
+
+jobs:
+  sprawdz:
+    name: Sprawdzenie (${{ matrix.system }})
+    runs-on: ${{ matrix.system }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        system: [windows-latest, ubuntu-latest]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Pobranie kodu
+        uses: actions/checkout@v5
+
+      - name: Instalacja Go (wersja z go.mod)
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Instalacja Node (LTS)
+        uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Interfejs (npm ci, build, strażnik stylu)
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+          npm run straznik
+
+      - name: go vet (system bieżący)
+        run: go vet ./...
+
+      - name: go vet (GOOS=linux)
+        env:
+          GOOS: linux
+        run: go vet ./...
+
+      - name: go vet (GOOS=windows)
+        env:
+          GOOS: windows
+        run: go vet ./...
+
+      - name: go test
+        run: go test ./...
+
+      - name: Strażnik projektu
+        run: go run ./narzedzia_dev/straznik
+
+      - name: Budowa binarki (Windows)
+        if: runner.os == 'Windows'
+        run: go build -trimpath -ldflags "-s -w" -o wyjscie/skrytka.exe ./cmd/skrytka
+
+      - name: Budowa binarki (Linux)
+        if: runner.os == 'Linux'
+        run: go build -trimpath -ldflags "-s -w" -o wyjscie/skrytka ./cmd/skrytka

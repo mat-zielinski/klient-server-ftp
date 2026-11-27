@@ -1,0 +1,214 @@
+/* Tokeny wyglądu Skrytki: JEDYNE miejsce z kolorami i rozmiarami (px).
+   Przeniesione 1:1 ze stacji Programator_Czarek (programator/qt/motyw.py: KOLOR, _KOLORY_JASNE, CZCIONKA, ODSTEP,
+   PROMIEN, WYSOKOSC, UKLAD). Motyw ciemny domyślny, jasny przez atrybut data-motyw="jasny" na <html>.
+   Strażnik stylu (sprawdz_styl.mjs) odrzuca kolory i px w każdym innym pliku src/. */
+
+:root {
+  color-scheme: dark;
+
+  /* KOLOR (motyw ciemny) */
+  --kolor-tlo: #0a0f18;
+  --kolor-okno: #0e1420;
+  --kolor-panel: #151d2b;
+  --kolor-karta: #111926;
+  --kolor-pasek: #0b111b;
+  --kolor-tekst: #e6ebf2;
+  --kolor-opis: #8c99ab;
+  --kolor-siatka: #1f2a3b;
+  --kolor-przycisk: #26334a;
+  --kolor-przycisk-hover: #2f3e58;
+  --kolor-niebieski: #60a5fa;
+  --kolor-niebieski-tlo: #2f6fe4;
+  --kolor-zielony: #34d36f;
+  --kolor-zielony-tlo: #1f8a4c;
+  --kolor-czerwony: #f87171;
+  --kolor-czerwony-tlo: #b42323;
+  --kolor-zolty: #fbbf24;
+  --kolor-pomaranczowy: #fb923c;
+  --kolor-pomaranczowy-tlo: #c2410c;
+  --kolor-fioletowy: #a78bfa;
+  --kolor-rozowy: #f472b6;
+  --kolor-aktywny: #1c2b45;
+  --kolor-mono: #0b1220;
+  --kolor-tlo-ok: #123321;
+  --kolor-tlo-info: #172a4a;
+  --kolor-tlo-blad: #3a1717;
+  --kolor-tlo-ostrz: #3a2c10;
+  --kolor-na-ciemnym: #ffffff;
+  /* pochodne (stacja: WYLACZONY, zmieszaj): przygaszone przyciski, zasłona okna modalnego, cień */
+  --kolor-wylaczony-tlo: #26334a;
+  --kolor-wylaczony-napis: #99a1af;
+  --kolor-wylaczony-glowny: #21427e;
+  --kolor-wylaczony-blad: #5d2027;
+  --kolor-wylaczony-napis-glowny: #d0d2d5;
+  --kolor-wylaczony-napis-blad: #d0d2d5;
+  --kolor-zaslona: rgb(5 8 14 / 0.62);
+  --kolor-cien: rgb(0 0 0 / 0.45);
+
+  /* CZCIONKA */
+  --czcionka-ui: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  --czcionka-mono: Consolas, "Cascadia Mono", ui-monospace, monospace;
+  --czcionka-tekst: 13px;
+  --czcionka-maly: 12px;
+  --czcionka-drobny: 11px;
+  --czcionka-etykieta: 10px;
+  --czcionka-tytul-karty: 13px;
+  --czcionka-tytul-strony: 17px;
+  --czcionka-logo: 14px;
+  --czcionka-kpi: 26px;
+  --czcionka-duzy: 30px;
+  --czcionka-gruby: 700;
+  --czcionka-polgruby: 600;
+  --czcionka-normalny: 400;
+  --czcionka-rozstaw-etykiety: 0.08em;
+
+  /* ODSTEP */
+  --odstep-xs: 4px;
+  --odstep-s: 6px;
+  --odstep-m: 8px;
+  --odstep-l: 10px;
+  --odstep-xl: 12px;
+  --odstep-xxl: 14px;
+  --odstep-sekcja: 16px;
+  --odstep-pozycje: 2px;
+  --odstep-kafelki: 5px;
+  --odstep-wnetrze-segmentu: 3px;
+  --odstep-przycisk-maly: 9px;
+  --odstep-ramka: 1px;
+  /* skrót numeryczny (1 = xs … 7 = sekcja) */
+  --odstep-1: var(--odstep-xs);
+  --odstep-2: var(--odstep-s);
+  --odstep-3: var(--odstep-m);
+  --odstep-4: var(--odstep-l);
+  --odstep-5: var(--odstep-xl);
+  --odstep-6: var(--odstep-xxl);
+  --odstep-7: var(--odstep-sekcja);
+  --ramka: var(--odstep-ramka) solid var(--kolor-siatka);
+
+  /* PROMIEN */
+  --promien-karta: 12px;
+  --promien-kafel: 10px;
+  --promien-przycisk: 8px;
+  --promien-segment: 6px;
+  --promien-pigulka: 14px;
+  --promien-chip: 13px;
+  --promien-kropka: 4px;
+  --promien-liczba: 7px;
+  --promien-kolo: 50%;
+
+  /* WYSOKOSC */
+  --wysokosc-przycisk: 30px;
+  --wysokosc-przycisk-maly: 26px;
+  --wysokosc-przycisk-duzy: 38px;
+  --wysokosc-pineska: 28px;
+  --wysokosc-segment: 24px;
+  --wysokosc-pole: 30px;
+  --wysokosc-chip: 26px;
+  --wysokosc-pozycja-paska: 34px;
+  --wysokosc-naglowek-strony: 54px;
+  --wysokosc-kropka: 7px;
+  --wysokosc-znaczek: 24px;
+  --wysokosc-naglowek-karty: 28px;
+  --wysokosc-przewijak: 8px;
+  --wysokosc-pasek-postepu: 6px;
+  --wysokosc-wiersz-tabeli: 34px;
+
+  /* UKLAD */
+  --uklad-pasek-w: 176px;
+  --uklad-pasek-zwiniety-w: 58px;
+  --uklad-strona-min-w: 320px;
+  --uklad-tytul-karty-min-w: 56px;
+  --uklad-ikona: 16px;
+  --uklad-ikona-s: 14px;
+  --uklad-ikona-l: 20px;
+  --uklad-ikona-pusto: 40px;
+  --uklad-kreska-ikony: 2;
+  --uklad-suwak-h: 16px;
+  --uklad-suwak-w: 28px;
+  --uklad-suwak-margines: 2px;
+  --uklad-suwak-przygaszenie: 0.45;
+  --uklad-okno-w: 520px;
+  --uklad-okno-maks-h: 86vh;
+  --uklad-menu-w: 220px;
+  --uklad-toast-w: 360px;
+  --uklad-dymek-w: 260px;
+  --uklad-kafel-min-w: 150px;
+  --uklad-strona-maks-w: 1600px;
+  --uklad-pole-w: 240px;
+  /* wykresy (web-transfery: komponenty/wykresy/*) */
+  --wykres-wysokosc: 240px;
+  --pierscien-rozmiar: 150px;
+  --mini-wykres-wysokosc: 24px;
+  --mini-wykres-szerokosc: 80px;
+  /* kod QR (KodQR.svelte): zawsze ciemne moduły na jasnym tle, w obu motywach */
+  --kolor-qr-tlo: #ffffff;
+  --kolor-qr-modul: #0a0f18;
+  --qr-s: 120px;
+  --qr-m: 180px;
+  --qr-l: 260px;
+  /* paleta poleceń */
+  --uklad-paleta-w: 600px;
+  --uklad-paleta-gora: 12vh;
+  --uklad-paleta-lista-h: 360px;
+  /* szerokości kolumn tabeli (Tabela: szerokosc 'xs' … 'xl') */
+  --kolumna-xs: 40px;
+  --kolumna-s: 80px;
+  --kolumna-m: 120px;
+  --kolumna-l: 180px;
+  --kolumna-xl: 260px;
+
+  /* progi responsywności (czyta je stan/uklad.svelte.ts; media queries nie przyjmują var()) */
+  --prog-telefon: 640px;
+  --prog-waski: 1024px;
+  --prog-sredni: 1280px;
+
+  /* ruch */
+  --czas-szybki: 120ms;
+  --czas-sredni: 200ms;
+  --czas-toast: 4500ms;
+  --warstwa-pasek: 20;
+  --warstwa-menu: 40;
+  --warstwa-okno: 50;
+  --warstwa-toast: 60;
+}
+
+/* _KOLORY_JASNE */
+:root[data-motyw="jasny"] {
+  color-scheme: light;
+  --kolor-tlo: #eef1f5;
+  --kolor-okno: #f4f6f9;
+  --kolor-panel: #ffffff;
+  --kolor-karta: #f7f9fb;
+  --kolor-pasek: #ffffff;
+  --kolor-tekst: #18212d;
+  --kolor-opis: #5f6b7b;
+  --kolor-siatka: #dde3ea;
+  --kolor-przycisk: #e6eaf0;
+  --kolor-przycisk-hover: #d5dce5;
+  --kolor-niebieski: #2563eb;
+  --kolor-niebieski-tlo: #2563eb;
+  --kolor-zielony: #15803d;
+  --kolor-zielony-tlo: #15803d;
+  --kolor-czerwony: #dc2626;
+  --kolor-czerwony-tlo: #b91c1c;
+  --kolor-zolty: #b45309;
+  --kolor-pomaranczowy: #c2410c;
+  --kolor-pomaranczowy-tlo: #c2410c;
+  --kolor-fioletowy: #7c3aed;
+  --kolor-rozowy: #db2777;
+  --kolor-aktywny: #e3ecff;
+  --kolor-mono: #fbfcfd;
+  --kolor-tlo-ok: #e1f5e8;
+  --kolor-tlo-info: #e3ecff;
+  --kolor-tlo-blad: #fde5e5;
+  --kolor-tlo-ostrz: #fdf0d9;
+  --kolor-na-ciemnym: #ffffff;
+  --kolor-wylaczony-tlo: #f0f2f6;
+  --kolor-wylaczony-napis: #6e757d;
+  --kolor-wylaczony-glowny: #e0e9fc;
+  --kolor-wylaczony-blad: #f5dfdf;
+  --kolor-wylaczony-napis-glowny: #2563eb;
+  --kolor-wylaczony-napis-blad: #b91c1c;
+  --kolor-zaslona: rgb(24 33 45 / 0.38);
+  --kolor-cien: rgb(24 33 45 / 0.16);
+}

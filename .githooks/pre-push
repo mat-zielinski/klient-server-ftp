@@ -1,0 +1,71 @@
+#!/bin/sh
+# Hak git PRZED PUSH (Skrytka). Włącza go raz na komputer: skrypty\wlacz_haki_git.bat albo skrypty/wlacz_haki_git.sh.
+# Blokuje push, gdy:
+#   1) w indeksie albo w wysyłanych commitach są dane tego komputera (dane/konta.json, dane/udostepnienia.json,
+#      dane/konfiguracja.json, dane/certyfikaty/*, logi/*, kopie/*, *.conf); repo jest publiczne,
+#   2) są niezacommitowane zmiany w *.go (testy sprawdziłyby drzewo robocze, a nie wysyłane commity),
+#   3) nie przechodzi „sprawdz.sh szybko” (go vet Windows i Linux + strażnik),
+#   4) padają testy zmienionych pakietów (nowa gałąź, nieznany stan serwera albo zmiana go.mod = go test ./...).
+# Pełny zestaw (z budową web i mutacjami): sprawdz.bat / sprawdz.sh. Obejście `--no-verify` jest zakazane.
+cd "$(git rev-parse --show-toplevel)" || exit 1
+. .githooks/wspolne.sh
+ZERO=0000000000000000000000000000000000000000
+GO=$(go_projektu)
+
+ZAKAZANE_PLIKI=$(git ls-files | zakazane_w_liscie)
+PELNE=0
+ZMIENIONE=""
+while read -r _lokalny sha _zdalny zsha; do
+    zsha=$(printf '%s' "$zsha" | tr -d '\r')
+    [ "$sha" = "$ZERO" ] && continue                     # usunięcie gałęzi
+    W_COMMICIE=$(git ls-tree -r --name-only "$sha" | zakazane_w_liscie)
+    [ -n "$W_COMMICIE" ] && ZAKAZANE_PLIKI=$(printf '%s\n%s' "$ZAKAZANE_PLIKI" "$W_COMMICIE")
+    if [ "$zsha" = "$ZERO" ] || ! git cat-file -e "$zsha^{commit}" 2>/dev/null; then
+        PELNE=1
+        continue
+    fi
+    # dane w którymkolwiek wysyłanym commicie (usunięte później i tak zostają w historii)
+    W_HISTORII=$(git log --name-only --format= "$zsha..$sha" | zakazane_w_liscie)
+    [ -n "$W_HISTORII" ] && ZAKAZANE_PLIKI=$(printf '%s\n%s' "$ZAKAZANE_PLIKI" "$W_HISTORII")
+    ZMIENIONE=$(printf '%s\n%s' "$ZMIENIONE" "$(git diff --name-only "$zsha" "$sha")")
+done
+ZAKAZANE_PLIKI=$(printf '%s\n' "$ZAKAZANE_PLIKI" | sed '/^$/d' | sort -u)
+if [ -n "$ZAKAZANE_PLIKI" ]; then
+    echo "PUSH ZABLOKOWANY: w repo są dane tego komputera (repo jest publiczne):"
+    printf '%s\n' "$ZAKAZANE_PLIKI" | sed 's/^/  /'
+    echo "  usuń je z indeksu (git rm --cached <plik>) i z historii wysyłanych commitów, potem powtórz push"
+    exit 1
+fi
+
+BRUDNE=$(git status --porcelain -- '*.go' go.mod go.sum)
+if [ -n "$BRUDNE" ]; then
+    echo "PUSH ZABLOKOWANY: niezacommitowane zmiany w kodzie Go; testy sprawdziłyby drzewo robocze, a nie wysyłane commity:"
+    printf '%s\n' "$BRUDNE" | head -n 20
+    echo "  zrób commit albo odłóż zmiany (git stash -u) i powtórz push"
+    exit 1
+fi
+
+BLEDY=0
+sh ./sprawdz.sh szybko || BLEDY=1
+printf '%s\n' "$ZMIENIONE" | grep -qE '^go\.(mod|sum)$' && PELNE=1
+if [ "$PELNE" = "1" ]; then
+    echo "Testy: wszystkie pakiety (nowa gałąź, nieznany stan serwera albo zmiana go.mod)"
+    "$GO" test ./... || BLEDY=1
+else
+    PAKIETY=$(printf '%s\n' "$ZMIENIONE" | grep -E '\.go$' | sed 's|/[^/]*$||; s|^[^/]*\.go$|.|' | sort -u \
+        | while read -r katalog; do
+            if [ -d "$katalog" ] && ls "$katalog"/*.go >/dev/null 2>&1; then echo "./$katalog"; fi
+        done)
+    if [ -z "$PAKIETY" ]; then
+        echo "Testy: brak zmienionych pakietów Go"
+    else
+        echo "Testy zmienionych pakietów:" $PAKIETY
+        # shellcheck disable=SC2086
+        "$GO" test $PAKIETY || BLEDY=1
+    fi
+fi
+if [ "$BLEDY" -ne 0 ]; then
+    echo "PUSH ZABLOKOWANY: popraw błędy zgłoszone wyżej"
+    exit 1
+fi
+exit 0
